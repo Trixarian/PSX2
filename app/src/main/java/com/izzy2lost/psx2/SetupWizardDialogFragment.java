@@ -194,11 +194,22 @@ public class SetupWizardDialogFragment extends DialogFragment {
                 for (File f : fs) {
                     if (f != null && f.isFile()) {
                         String lower = f.getName().toLowerCase(java.util.Locale.ROOT);
-                        boolean isMainBios = lower.startsWith("scph") && (lower.endsWith(".bin") || lower.endsWith(".rom"));
-                        boolean isComponentSuffix = lower.endsWith(".rom0") || lower.endsWith(".rom1") || lower.endsWith(".rom2") || lower.endsWith(".erom");
-                        boolean isBareComponent = lower.equals("rom0") || lower.equals("rom1") || lower.equals("rom2") || lower.equals("erom");
-                        if ((isMainBios && f.length() >= 256 * 1024) || (isComponentSuffix || isBareComponent))
+                        
+                        // Check for component ROM files (these have specific names)
+                        boolean isComponentSuffix = lower.endsWith(".rom0") || lower.endsWith(".rom1") || 
+                                                   lower.endsWith(".rom2") || lower.endsWith(".erom");
+                        boolean isBareComponent = lower.equals("rom0") || lower.equals("rom1") || 
+                                                 lower.equals("rom2") || lower.equals("erom");
+                        
+                        if (isComponentSuffix || isBareComponent) {
                             return true;
+                        }
+                        
+                        // Accept any .bin or .rom file that's at least 256KB (likely a BIOS)
+                        // This covers renamed files and all regional variants
+                        if ((lower.endsWith(".bin") || lower.endsWith(".rom")) && f.length() >= 256 * 1024) {
+                            return true;
+                        }
                     }
                 }
             }
