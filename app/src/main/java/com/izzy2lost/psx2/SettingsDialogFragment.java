@@ -72,6 +72,16 @@ public class SettingsDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        // Pause game when settings dialog is shown
+        try {
+            if (getActivity() instanceof MainActivity) {
+                MainActivity mainActivity = (MainActivity) getActivity();
+                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
+                    NativeApp.pause();
+                }
+            }
+        } catch (Throwable ignored) {}
+        
         Context ctx = requireContext();
         View view = getLayoutInflater().inflate(R.layout.dialog_settings, null, false);
 
@@ -280,7 +290,21 @@ public class SettingsDialogFragment extends DialogFragment {
              } catch (Throwable ignored) {}
          });
 
-        return b.create();
+        Dialog dialog = b.create();
+        
+        // Resume game when dialog is dismissed
+        dialog.setOnDismissListener(d -> {
+            try {
+                if (getActivity() instanceof MainActivity) {
+                    MainActivity mainActivity = (MainActivity) getActivity();
+                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
+                        NativeApp.resume();
+                    }
+                }
+            } catch (Throwable ignored) {}
+        });
+        
+        return dialog;
     }
 
     private static int scaleToIndex(float scale) {

@@ -21,6 +21,16 @@ public class QuickActionsDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        // Pause game when quick actions dialog is shown
+        try {
+            if (getActivity() instanceof MainActivity) {
+                MainActivity mainActivity = (MainActivity) getActivity();
+                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
+                    NativeApp.pause();
+                }
+            }
+        } catch (Throwable ignored) {}
+        
         View view = getLayoutInflater().inflate(R.layout.dialog_quick_actions, null, false);
 
         FloatingActionButton btnPower = view.findViewById(R.id.btn_quick_power);
@@ -232,20 +242,12 @@ public class QuickActionsDialogFragment extends DialogFragment {
             });
         }
 
-        // Exit Game: pause game and open games dialog
+        // Exit Game: open games dialog
         if (btnExitGame != null) {
             btnExitGame.setOnClickListener(v -> {
                 try {
                     // Capture a stable Activity reference before dismissing the dialog
                     final android.app.Activity activity = getActivity();
-
-                    // Pause the game first (toggle like the drawer action)
-                    if (activity instanceof MainActivity) {
-                        ((MainActivity) activity).togglePauseState();
-                    } else {
-                        boolean paused = NativeApp.isPaused();
-                        if (!paused) NativeApp.pause();
-                    }
 
                     // Close this dialog
                     dismissAllowingStateLoss();
@@ -270,10 +272,24 @@ public class QuickActionsDialogFragment extends DialogFragment {
         // Cancel button
         if (btnCancel != null) btnCancel.setOnClickListener(v -> dismissAllowingStateLoss());
 
-        return new MaterialAlertDialogBuilder(requireContext(),
+        Dialog dialog = new MaterialAlertDialogBuilder(requireContext(),
                 com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
                 .setView(view)
                 .create();
+        
+        // Resume game when dialog is dismissed
+        dialog.setOnDismissListener(d -> {
+            try {
+                if (getActivity() instanceof MainActivity) {
+                    MainActivity mainActivity = (MainActivity) getActivity();
+                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
+                        NativeApp.resume();
+                    }
+                }
+            } catch (Throwable ignored) {}
+        });
+        
+        return dialog;
     }
 
     private void quitApp() {

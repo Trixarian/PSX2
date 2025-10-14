@@ -100,6 +100,11 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         return false;
     }
 
+    // Public method to check if emulation thread is running
+    public boolean isEmulationThreadRunning() {
+        return isThread();
+    }
+
     // Expose whether a game has been chosen (non-empty path)
     public boolean hasSelectedGame() {
         return !TextUtils.isEmpty(m_szGamefile);
@@ -496,6 +501,9 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         // Setup right drawer quick actions
         setupRightDrawerActions();
         
+        // Setup drawer listeners for pause/resume
+        setupDrawerListeners();
+        
         // Setup picture-in-picture support
         addPictureInPictureSupport();
     }
@@ -545,11 +553,34 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         if (btn_settings != null) {
             btn_settings.setOnClickListener(v -> {
                 try {
-                    // Refresh drawer settings before opening
-                    refreshDrawerSettings();
+                    // Pause game when opening settings drawer
+                    if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
+                        NativeApp.pause();
+                    }
+                    // Get drawer layout first
                     DrawerLayout drawer = findViewById(R.id.drawer_layout);
-                    if (drawer != null) drawer.openDrawer(androidx.core.view.GravityCompat.START);
-                } catch (Throwable ignored) {}
+                    if (drawer != null) {
+                        // Refresh drawer settings before opening - add error handling
+                        try {
+                            refreshDrawerSettings();
+                        } catch (Exception e) {
+                            android.util.Log.e("MainActivity", "Error refreshing drawer settings: " + e.getMessage());
+                            // Continue anyway even if refresh fails
+                        }
+                        drawer.openDrawer(androidx.core.view.GravityCompat.START);
+                    }
+                } catch (Throwable t) {
+                    android.util.Log.e("MainActivity", "Error opening settings drawer: " + t.getMessage());
+                    // Try to open drawer directly as fallback
+                    try {
+                        DrawerLayout drawer = findViewById(R.id.drawer_layout);
+                        if (drawer != null) {
+                            drawer.openDrawer(androidx.core.view.GravityCompat.START);
+                        }
+                    } catch (Throwable fallback) {
+                        android.util.Log.e("MainActivity", "Fallback drawer open also failed: " + fallback.getMessage());
+                    }
+                }
             });
         }
 
@@ -1968,71 +1999,133 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
     private void refreshDrawerSettings() {
         try {
             NavigationView nav = findViewById(R.id.nav_view);
-            if (nav != null && nav.getHeaderCount() > 0) {
-                View header = nav.getHeaderView(0);
-                if (header != null) {
-                    SharedPreferences prefs = getSharedPreferences("app_prefs", MODE_PRIVATE);
-                    
-                    // Refresh spinner values to reflect current settings
-                    Spinner spAspect = header.findViewById(R.id.drawer_sp_aspect_ratio);
-                    if (spAspect != null && spAspect.getAdapter() != null) {
-                        int savedAspect = prefs.getInt("aspect_ratio", 1);
-                        ArrayAdapter<?> aspectAdapter = (ArrayAdapter<?>) spAspect.getAdapter();
-                        if (savedAspect >= 0 && savedAspect < aspectAdapter.getCount()) {
-                            spAspect.setSelection(savedAspect);
-                        }
-                    }
-
-                    Spinner spScale = header.findViewById(R.id.drawer_sp_scale);
-                    if (spScale != null && spScale.getAdapter() != null) {
-                        float savedScale = prefs.getFloat("upscale_multiplier", 1.0f);
-                        ArrayAdapter<?> scaleAdapter = (ArrayAdapter<?>) spScale.getAdapter();
-                        int scaleIndex = Math.max(0, Math.min(scaleAdapter.getCount() - 1, Math.round(savedScale) - 1));
-                        spScale.setSelection(scaleIndex);
-                    }
-
-                    Spinner spBlending = header.findViewById(R.id.drawer_sp_blending_accuracy);
-                    if (spBlending != null && spBlending.getAdapter() != null) {
-                        int savedBlend = prefs.getInt("blending_accuracy", 1);
-                        ArrayAdapter<?> blendAdapter = (ArrayAdapter<?>) spBlending.getAdapter();
-                        if (savedBlend >= 0 && savedBlend < blendAdapter.getCount()) {
-                            spBlending.setSelection(savedBlend);
-                        }
-                    }
-                    
-                    // Refresh switch states
-                    com.google.android.material.materialswitch.MaterialSwitch swWide = header.findViewById(R.id.drawer_sw_widescreen);
-                    if (swWide != null) {
-                        swWide.setChecked(prefs.getBoolean("widescreen_patches", true));
-                    }
-
-                    com.google.android.material.materialswitch.MaterialSwitch swNoInt = header.findViewById(R.id.drawer_sw_no_interlacing);
-                    if (swNoInt != null) {
-                        swNoInt.setChecked(prefs.getBoolean("no_interlacing_patches", true));
-                    }
-
-                    com.google.android.material.materialswitch.MaterialSwitch swLoadTex = header.findViewById(R.id.drawer_sw_load_textures);
-                    if (swLoadTex != null) {
-                        swLoadTex.setChecked(prefs.getBoolean("load_textures", false));
-                    }
-
-                    com.google.android.material.materialswitch.MaterialSwitch swAsyncTex = header.findViewById(R.id.drawer_sw_async_textures);
-                    if (swAsyncTex != null) {
-                        swAsyncTex.setChecked(prefs.getBoolean("async_texture_loading", true));
-                    }
-
-                    com.google.android.material.materialswitch.MaterialSwitch swPrecache = header.findViewById(R.id.drawer_sw_precache_textures);
-                    if (swPrecache != null) {
-                        swPrecache.setChecked(prefs.getBoolean("precache_textures", false));
-                    }
-
-                    com.google.android.material.materialswitch.MaterialSwitch swDevHud = header.findViewById(R.id.drawer_sw_dev_hud);
-                    if (swDevHud != null) {
-                        swDevHud.setChecked(prefs.getBoolean("hud_visible", false));
+            if (nav == null) {
+                android.util.Log.w("MainActivity", "NavigationView not found during refreshDrawerSettings");
+                return;
+            }
+            
+            // Ensure header exists before trying to access it
+            if (nav.getHeaderCount() == 0) {
+                android.util.Log.w("MainActivity", "NavigationView has no header during refreshDrawerSettings");
+                return;
+            }
+            
+            View header = nav.getHeaderView(0);
+            if (header == null) {
+                android.util.Log.w("MainActivity", "NavigationView header is null during refreshDrawerSettings");
+                return;
+            }
+            
+            SharedPreferences prefs = null;
+            try {
+                prefs = getSharedPreferences("app_prefs", MODE_PRIVATE);
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error getting SharedPreferences: " + e.getMessage());
+                return;
+            }
+            
+            if (prefs == null) {
+                android.util.Log.e("MainActivity", "SharedPreferences is null during refreshDrawerSettings");
+                return;
+            }
+            
+            // Refresh spinner values to reflect current settings
+            try {
+                Spinner spAspect = header.findViewById(R.id.drawer_sp_aspect_ratio);
+                if (spAspect != null && spAspect.getAdapter() != null) {
+                    int savedAspect = prefs.getInt("aspect_ratio", 1);
+                    ArrayAdapter<?> aspectAdapter = (ArrayAdapter<?>) spAspect.getAdapter();
+                    if (savedAspect >= 0 && savedAspect < aspectAdapter.getCount()) {
+                        spAspect.setSelection(savedAspect);
                     }
                 }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing aspect ratio spinner: " + e.getMessage());
             }
-        } catch (Throwable ignored) {}
+
+            try {
+                Spinner spScale = header.findViewById(R.id.drawer_sp_scale);
+                if (spScale != null && spScale.getAdapter() != null) {
+                    float savedScale = prefs.getFloat("upscale_multiplier", 1.0f);
+                    ArrayAdapter<?> scaleAdapter = (ArrayAdapter<?>) spScale.getAdapter();
+                    int scaleIndex = Math.max(0, Math.min(scaleAdapter.getCount() - 1, Math.round(savedScale) - 1));
+                    spScale.setSelection(scaleIndex);
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing scale spinner: " + e.getMessage());
+            }
+
+            try {
+                Spinner spBlending = header.findViewById(R.id.drawer_sp_blending_accuracy);
+                if (spBlending != null && spBlending.getAdapter() != null) {
+                    int savedBlend = prefs.getInt("blending_accuracy", 1);
+                    ArrayAdapter<?> blendAdapter = (ArrayAdapter<?>) spBlending.getAdapter();
+                    if (savedBlend >= 0 && savedBlend < blendAdapter.getCount()) {
+                        spBlending.setSelection(savedBlend);
+                    }
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing blending spinner: " + e.getMessage());
+            }
+            
+            // Refresh switch states with individual error handling
+            try {
+                com.google.android.material.materialswitch.MaterialSwitch swWide = header.findViewById(R.id.drawer_sw_widescreen);
+                if (swWide != null) {
+                    swWide.setChecked(prefs.getBoolean("widescreen_patches", true));
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing widescreen switch: " + e.getMessage());
+            }
+
+            try {
+                com.google.android.material.materialswitch.MaterialSwitch swNoInt = header.findViewById(R.id.drawer_sw_no_interlacing);
+                if (swNoInt != null) {
+                    swNoInt.setChecked(prefs.getBoolean("no_interlacing_patches", true));
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing no interlacing switch: " + e.getMessage());
+            }
+
+            try {
+                com.google.android.material.materialswitch.MaterialSwitch swLoadTex = header.findViewById(R.id.drawer_sw_load_textures);
+                if (swLoadTex != null) {
+                    swLoadTex.setChecked(prefs.getBoolean("load_textures", false));
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing load textures switch: " + e.getMessage());
+            }
+
+            try {
+                com.google.android.material.materialswitch.MaterialSwitch swAsyncTex = header.findViewById(R.id.drawer_sw_async_textures);
+                if (swAsyncTex != null) {
+                    swAsyncTex.setChecked(prefs.getBoolean("async_texture_loading", true));
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing async textures switch: " + e.getMessage());
+            }
+
+            try {
+                com.google.android.material.materialswitch.MaterialSwitch swPrecache = header.findViewById(R.id.drawer_sw_precache_textures);
+                if (swPrecache != null) {
+                    swPrecache.setChecked(prefs.getBoolean("precache_textures", false));
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing precache textures switch: " + e.getMessage());
+            }
+
+            try {
+                com.google.android.material.materialswitch.MaterialSwitch swDevHud = header.findViewById(R.id.drawer_sw_dev_hud);
+                if (swDevHud != null) {
+                    swDevHud.setChecked(prefs.getBoolean("hud_visible", false));
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Error refreshing dev HUD switch: " + e.getMessage());
+            }
+            
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Unexpected error in refreshDrawerSettings: " + t.getMessage());
+        }
     }
 
     private void loadAndApplyStoredSettings() {
@@ -2204,6 +2297,41 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
                 .show();
     }
 
+    private void setupDrawerListeners() {
+        try {
+            DrawerLayout drawer = findViewById(R.id.drawer_layout);
+            if (drawer != null) {
+                drawer.addDrawerListener(new androidx.drawerlayout.widget.DrawerLayout.DrawerListener() {
+                    @Override
+                    public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {}
+
+                    @Override
+                    public void onDrawerOpened(@NonNull View drawerView) {
+                        // Pause game when any drawer is opened
+                        try {
+                            if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
+                                NativeApp.pause();
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+
+                    @Override
+                    public void onDrawerClosed(@NonNull View drawerView) {
+                        // Resume game when all drawers are closed
+                        try {
+                            if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
+                                NativeApp.resume();
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+
+                    @Override
+                    public void onDrawerStateChanged(int newState) {}
+                });
+            }
+        } catch (Throwable ignored) {}
+    }
+
     private void setupRightDrawerActions() {
         try {
             View rightDrawer = findViewById(R.id.end_drawer);
@@ -2251,7 +2379,7 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
                     });
                 }
 
-                // Exit Game button (pause + open games)
+                // Exit Game button (open games dialog)
                 View btnExitGame = rightDrawer.findViewById(R.id.right_drawer_btn_exit_game);
                 if (btnExitGame != null) {
                     btnExitGame.setOnClickListener(v -> {
@@ -2259,9 +2387,7 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
                             // Close right drawer first
                             DrawerLayout drawer = findViewById(R.id.drawer_layout);
                             if (drawer != null) drawer.closeDrawer(androidx.core.view.GravityCompat.END);
-                            // Pause the game first
-                            togglePauseState();
-                            // Then open games dialog after a short delay
+                            // Open games dialog after a short delay
                             findViewById(android.R.id.content).postDelayed(() -> {
                                 openGamesDialog();
                             }, 300);

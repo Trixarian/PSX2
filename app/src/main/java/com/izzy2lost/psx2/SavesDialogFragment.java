@@ -148,6 +148,16 @@ public class SavesDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        // Pause game when saves dialog is shown
+        try {
+            if (getActivity() instanceof MainActivity) {
+                MainActivity mainActivity = (MainActivity) getActivity();
+                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
+                    NativeApp.pause();
+                }
+            }
+        } catch (Throwable ignored) {}
+        
         Context ctx = requireContext();
         View view = getLayoutInflater().inflate(R.layout.dialog_saves, null, false);
 
@@ -203,6 +213,20 @@ public class SavesDialogFragment extends DialogFragment {
                .setView(view)
                .setNegativeButton("Cancel", (d, w) -> d.dismiss());
 
-        return builder.create();
+        Dialog dialog = builder.create();
+        
+        // Resume game when dialog is dismissed
+        dialog.setOnDismissListener(d -> {
+            try {
+                if (getActivity() instanceof MainActivity) {
+                    MainActivity mainActivity = (MainActivity) getActivity();
+                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
+                        NativeApp.resume();
+                    }
+                }
+            } catch (Throwable ignored) {}
+        });
+        
+        return dialog;
     }
 }

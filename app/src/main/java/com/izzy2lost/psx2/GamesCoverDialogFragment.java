@@ -117,10 +117,33 @@ public class GamesCoverDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        // Pause game when games cover dialog is shown
+        try {
+            if (getActivity() instanceof MainActivity) {
+                MainActivity mainActivity = (MainActivity) getActivity();
+                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
+                    NativeApp.pause();
+                }
+            }
+        } catch (Throwable ignored) {}
+        
         // Return a styled dialog; content is provided by onCreateView
         Dialog d = new Dialog(requireContext(), R.style.PSX2_FullScreenDialog);
         // Ensure immersive as soon as window exists
         try { applyImmersiveToWindow(d.getWindow()); } catch (Throwable ignored) {}
+        
+        // Resume game when dialog is dismissed
+        d.setOnDismissListener(dialog -> {
+            try {
+                if (getActivity() instanceof MainActivity) {
+                    MainActivity mainActivity = (MainActivity) getActivity();
+                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
+                        NativeApp.resume();
+                    }
+                }
+            } catch (Throwable ignored) {}
+        });
+        
         return d;
     }
 
