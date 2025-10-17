@@ -48,10 +48,12 @@ public class GameSettingsDialogFragment extends DialogFragment {
         // Dialog is being destroyed - resume the game
         android.util.Log.d("GameSettingsDialog", "onDestroy called - resuming game");
         try {
-            if (getActivity() instanceof MainActivity) {
+            if (getActivity() != null && !getActivity().isFinishing() && getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).onDialogClosed();
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable e) {
+            android.util.Log.e("GameSettingsDialog", "Error in onDestroy: " + e.getMessage());
+        }
     }
 
     @NonNull

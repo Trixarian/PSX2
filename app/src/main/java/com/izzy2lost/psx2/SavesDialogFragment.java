@@ -217,9 +217,11 @@ public class SavesDialogFragment extends DialogFragment {
         // Dialog is being destroyed - resume the game
         android.util.Log.d("SavesDialog", "onDestroy called - resuming game");
         try {
-            if (getActivity() instanceof MainActivity) {
+            if (getActivity() != null && !getActivity().isFinishing() && getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).onDialogClosed();
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable e) {
+            android.util.Log.e("SavesDialog", "Error in onDestroy: " + e.getMessage());
+        }
     }
 }

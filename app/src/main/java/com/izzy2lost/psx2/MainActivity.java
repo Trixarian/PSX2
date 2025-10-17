@@ -2414,14 +2414,24 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         mOpenDialogCount = Math.max(0, mOpenDialogCount - 1);
         android.util.Log.d("DialogTracking", "Dialog closed. Count: " + mOpenDialogCount + ", Drawer open: " + mDrawerOpen);
         if (mOpenDialogCount == 0 && !mDrawerOpen) {
-            // All dialogs closed and no drawers open, resume the game
-            try {
-                if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
-                    android.util.Log.d("DialogTracking", "Resuming game on dialog close");
-                    NativeApp.resume();
-                    updatePausePlayButton();
-                }
-            } catch (Throwable ignored) {}
+            // All dialogs closed and no drawers open, resume the game with a small delay
+            // Delay prevents crashes when rapidly opening/closing dialogs
+            View root = findViewById(android.R.id.content);
+            if (root != null) {
+                root.postDelayed(() -> {
+                    try {
+                        if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
+                            android.util.Log.d("DialogTracking", "Resuming game on dialog close");
+                            NativeApp.resume();
+                            updatePausePlayButton();
+                        } else {
+                            android.util.Log.d("DialogTracking", "Not resuming - hasGame: " + hasSelectedGame() + ", isThread: " + isThread() + ", isPaused: " + (isThread() ? NativeApp.isPaused() : "N/A"));
+                        }
+                    } catch (Throwable e) {
+                        android.util.Log.e("DialogTracking", "Error resuming game: " + e.getMessage());
+                    }
+                }, 100); // Small delay to let dialog fully close
+            }
         }
     }
     
@@ -2442,14 +2452,23 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         mDrawerOpen = false;
         android.util.Log.d("DrawerTracking", "Drawer closed. Dialog count: " + mOpenDialogCount);
         if (mOpenDialogCount == 0 && !mDrawerOpen) {
-            // All dialogs closed and no drawers open, resume the game
-            try {
-                if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
-                    android.util.Log.d("DrawerTracking", "Resuming game on drawer close");
-                    NativeApp.resume();
-                    updatePausePlayButton();
-                }
-            } catch (Throwable ignored) {}
+            // All dialogs closed and no drawers open, resume the game with a small delay
+            View root = findViewById(android.R.id.content);
+            if (root != null) {
+                root.postDelayed(() -> {
+                    try {
+                        if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
+                            android.util.Log.d("DrawerTracking", "Resuming game on drawer close");
+                            NativeApp.resume();
+                            updatePausePlayButton();
+                        } else {
+                            android.util.Log.d("DrawerTracking", "Not resuming - hasGame: " + hasSelectedGame() + ", isThread: " + isThread() + ", isPaused: " + (isThread() ? NativeApp.isPaused() : "N/A"));
+                        }
+                    } catch (Throwable e) {
+                        android.util.Log.e("DrawerTracking", "Error resuming game: " + e.getMessage());
+                    }
+                }, 100); // Small delay to let drawer fully close
+            }
         }
     }
 
