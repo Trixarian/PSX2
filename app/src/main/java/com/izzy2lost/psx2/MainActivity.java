@@ -425,6 +425,17 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        // Force dark mode for consistent appearance
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+ (API 31+)
+            getWindow().getDecorView().getWindowInsetsController().setSystemBarsAppearance(0, 
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | 
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+        }
+        // Force dark mode using AppCompat
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
+        
         // Enable edge-to-edge for Android 15+ compatibility
         EdgeToEdge.enable(this);
         
