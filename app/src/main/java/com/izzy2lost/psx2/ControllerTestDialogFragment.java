@@ -30,6 +30,13 @@ public class ControllerTestDialogFragment extends DialogFragment implements Cont
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        // Notify MainActivity that this dialog is opening
+        try {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogOpened();
+            }
+        } catch (Throwable ignored) {}
+        
         View view = getLayoutInflater().inflate(R.layout.dialog_controller_test, null);
         
         mControllerListText = view.findViewById(R.id.tv_controller_list);
@@ -41,11 +48,22 @@ public class ControllerTestDialogFragment extends DialogFragment implements Cont
         // Update controller list
         updateControllerList();
         
-        return new MaterialAlertDialogBuilder(requireContext())
+        Dialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Controller Test")
                 .setView(view)
                 .setPositiveButton("Close", null)
                 .create();
+        
+        // Resume game when dialog is dismissed
+        dialog.setOnDismissListener(d -> {
+            android.util.Log.d("ControllerTestDialog", "Controller test dialog dismissed");
+            // Use the global dialog tracking system
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogClosed();
+            }
+        });
+        
+        return dialog;
     }
     
     private void updateControllerList() {

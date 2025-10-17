@@ -21,13 +21,10 @@ public class QuickActionsDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        // Pause game when quick actions dialog is shown
+        // Notify MainActivity that this dialog is opening
         try {
             if (getActivity() instanceof MainActivity) {
-                MainActivity mainActivity = (MainActivity) getActivity();
-                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
-                    NativeApp.pause();
-                }
+                ((MainActivity) getActivity()).onDialogOpened();
             }
         } catch (Throwable ignored) {}
         
@@ -228,7 +225,8 @@ public class QuickActionsDialogFragment extends DialogFragment {
         if (btnGames != null) {
             btnGames.setOnClickListener(v -> {
                 if (requireActivity() instanceof MainActivity) {
-                    ((MainActivity) requireActivity()).openGamesDialog();
+                    MainActivity mainActivity = (MainActivity) requireActivity();
+                    mainActivity.openGamesDialog();
                 }
                 dismissAllowingStateLoss();
             });
@@ -259,7 +257,8 @@ public class QuickActionsDialogFragment extends DialogFragment {
                             root.postDelayed(() -> {
                                 try {
                                     if (!activity.isFinishing()) {
-                                        ((MainActivity) activity).openGamesDialog();
+                                        MainActivity mainActivity = (MainActivity) activity;
+                                        mainActivity.openGamesDialog();
                                     }
                                 } catch (Throwable ignored) {}
                             }, 300);
@@ -272,26 +271,24 @@ public class QuickActionsDialogFragment extends DialogFragment {
         // Cancel button
         if (btnCancel != null) btnCancel.setOnClickListener(v -> dismissAllowingStateLoss());
 
-        Dialog dialog = new MaterialAlertDialogBuilder(requireContext(),
+        return new MaterialAlertDialogBuilder(requireContext(),
                 com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
                 .setView(view)
                 .create();
-        
-        // Resume game when dialog is dismissed
-        dialog.setOnDismissListener(d -> {
-            try {
-                if (getActivity() instanceof MainActivity) {
-                    MainActivity mainActivity = (MainActivity) getActivity();
-                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
-                        NativeApp.resume();
-                    }
-                }
-            } catch (Throwable ignored) {}
-        });
-        
-        return dialog;
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Dialog is being destroyed - resume the game
+        android.util.Log.d("QuickActionsDialog", "onDestroy called - resuming game");
+        try {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogClosed();
+            }
+        } catch (Throwable ignored) {}
+    }
+    
     private void quitApp() {
         // Stop emulator first
         NativeApp.shutdown();

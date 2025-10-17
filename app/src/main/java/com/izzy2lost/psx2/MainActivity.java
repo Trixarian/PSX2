@@ -88,8 +88,12 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
     private AlertDialog mBiosPromptDialog = null;
     private boolean mControllerHintShowing = false;
     private boolean mPreviousControllerState = false;
+    
+    // Global dialog tracking for pause/resume
+    private int mOpenDialogCount = 0;
+    private boolean mDrawerOpen = false;
 
-    private boolean isThread() {
+    public boolean isThread() {
         if (mEmulationThread != null) {
             Thread.State _thread_state = mEmulationThread.getState();
             return _thread_state == Thread.State.BLOCKED
@@ -553,9 +557,9 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         if (btn_settings != null) {
             btn_settings.setOnClickListener(v -> {
                 try {
-                    // Pause game when opening settings drawer
+                    // Pause game when opening settings drawer using the same logic as the pause/play button
                     if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
-                        NativeApp.pause();
+                        togglePauseState(); // This will pause the game and update button state
                     }
                     // Get drawer layout first
                     DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -1336,19 +1340,59 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
 
     private void importSingleBiosUri(Uri uri, File biosDir) {
         if (uri == null) return;
-        String displayName = getDisplayNameFromUri(this, uri);
-        if (TextUtils.isEmpty(displayName)) displayName = "bios.bin";
-        File outFile = new File(biosDir, displayName);
-        copyUriToFile(this, uri, outFile);
-        // Also mirror to SAF data root if set
-        android.net.Uri dataRoot = SafManager.getDataRootUri(this);
-        if (dataRoot != null) {
-            androidx.documentfile.provider.DocumentFile target = SafManager.createChild(this, new String[]{"bios"}, displayName, "application/octet-stream");
-            if (target != null) {
-                try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
-                    SafManager.copyFromStream(this, in, target.getUri());
-                } catch (Exception ignored) {}
+        
+        try {
+            String displayName = getDisplayNameFromUri(this, uri);
+            if (TextUtils.isEmpty(displayName)) displayName = "bios.bin";
+            File outFile = new File(biosDir, displayName);
+            
+            // Check if file already exists and is valid
+            if (outFile.exists() && outFile.length() > 0) {
+                android.util.Log.d("MainActivity", "BIOS file already exists: " + displayName);
+                return;
             }
+            
+            // Ensure bios directory exists
+            if (!biosDir.exists()) {
+                if (!biosDir.mkdirs()) {
+                    android.util.Log.e("MainActivity", "Failed to create BIOS directory: " + biosDir.getAbsolutePath());
+                    return;
+                }
+            }
+            
+            // Copy the file with improved error handling
+            boolean success = copyUriToFile(this, uri, outFile);
+            if (!success) {
+                android.util.Log.e("MainActivity", "Failed to copy BIOS file: " + displayName);
+                return;
+            }
+            
+            // Also mirror to SAF data root if set (with error handling)
+            android.net.Uri dataRoot = SafManager.getDataRootUri(this);
+            if (dataRoot != null) {
+                try {
+                    androidx.documentfile.provider.DocumentFile target = SafManager.createChild(this, new String[]{"bios"}, displayName, "application/octet-stream");
+                    if (target != null) {
+                        try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
+                            if (in != null) {
+                                SafManager.copyFromStream(this, in, target.getUri());
+                                android.util.Log.d("MainActivity", "BIOS file mirrored to SAF: " + displayName);
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.w("MainActivity", "Failed to mirror BIOS to SAF: " + e.getMessage());
+                            // Don't fail the import if SAF mirroring fails
+                        }
+                    }
+                } catch (Exception e) {
+                    android.util.Log.w("MainActivity", "Failed to create SAF target for BIOS: " + e.getMessage());
+                    // Don't fail the import if SAF mirroring fails
+                }
+            }
+            
+            android.util.Log.d("MainActivity", "BIOS import completed successfully: " + displayName);
+            
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Error during BIOS import: " + e.getMessage());
         }
     }
 
@@ -1397,14 +1441,49 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
             is = context.getContentResolver().openInputStream(uri);
             if (is == null) return false;
             os = new FileOutputStream(destFile);
-            byte[] buffer = new byte[8192];
+            
+            // Use smaller buffer size for lower-end devices to reduce memory pressure
+            byte[] buffer = new byte[4096]; // Reduced from 8192
             int read;
+            long totalBytes = 0;
+            long maxFileSize = 16 * 1024 * 1024; // 16MB max BIOS file size limit
+            
             while ((read = is.read(buffer)) != -1) {
+                totalBytes += read;
+                
+                // Check file size limit to prevent memory issues on lower-end devices
+                if (totalBytes > maxFileSize) {
+                    android.util.Log.w("MainActivity", "BIOS file too large: " + totalBytes + " bytes");
+                    return false;
+                }
+                
                 os.write(buffer, 0, read);
+                
+                // Force periodic flush to reduce memory pressure
+                if (totalBytes % (64 * 1024) == 0) { // Flush every 64KB
+                    os.flush();
+                }
             }
             os.flush();
+            
+            // Verify the file was copied successfully
+            if (destFile.length() == 0) {
+                android.util.Log.e("MainActivity", "BIOS file copy failed: empty file");
+                return false;
+            }
+            
+            android.util.Log.d("MainActivity", "BIOS file copied successfully: " + destFile.getName() +
+                              " (" + destFile.length() + " bytes)");
             return true;
+        } catch (OutOfMemoryError e) {
+            android.util.Log.e("MainActivity", "Out of memory during BIOS file copy: " + e.getMessage());
+            // Try to clean up partial file
+            try { if (destFile.exists()) destFile.delete(); } catch (Exception ignored) {}
+            return false;
         } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Error copying BIOS file: " + e.getMessage());
+            // Try to clean up partial file
+            try { if (destFile.exists()) destFile.delete(); } catch (Exception ignored) {}
             return false;
         } finally {
             try { if (is != null) is.close(); } catch (Exception ignored) {}
@@ -1802,8 +1881,15 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         android.util.Log.d("Controller", "Controller " + controllerId + " combo: " + comboName);
         
         if ("select_start".equals(comboName)) {
-            // Show quick actions dialog
+            // Show quick actions dialog with proper dialog tracking
             runOnUiThread(() -> {
+                // Pause the game immediately when controller combo is detected using the same logic as the pause/play button
+                if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
+                    try {
+                        togglePauseState(); // This will pause the game and update button state
+                    } catch (Throwable ignored) {}
+                }
+                
                 QuickActionsDialogFragment dialog = new QuickActionsDialogFragment();
                 dialog.show(getSupportFragmentManager(), "quick_actions");
             });
@@ -2215,16 +2301,27 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
     public void togglePauseState() {
         try {
             boolean isPaused = NativeApp.isPaused();
+            boolean hasGame = hasSelectedGame() && isThread();
+            android.util.Log.d("TogglePause", "togglePauseState called. isPaused: " + isPaused + ", hasGame: " + hasGame);
+            
             if (isPaused) {
+                android.util.Log.d("TogglePause", "Resuming game");
                 NativeApp.resume();
             } else {
+                android.util.Log.d("TogglePause", "Pausing game");
                 NativeApp.pause();
             }
             updatePausePlayButton();
-        } catch (Throwable ignored) {}
+            
+            // Log the state after the change
+            boolean newIsPaused = NativeApp.isPaused();
+            android.util.Log.d("TogglePause", "After toggle. New isPaused: " + newIsPaused);
+        } catch (Throwable e) {
+            android.util.Log.e("TogglePause", "Error in togglePauseState: " + e.getMessage());
+        }
     }
 
-    private void updatePausePlayButton() {
+    public void updatePausePlayButton() {
         MaterialButton btn_pause_play = findViewById(R.id.btn_pause_play);
         if (btn_pause_play != null) {
             try {
@@ -2297,6 +2394,65 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
                 .show();
     }
 
+    // Global dialog tracking methods
+    public void onDialogOpened() {
+        mOpenDialogCount++;
+        android.util.Log.d("DialogTracking", "Dialog opened. Count: " + mOpenDialogCount);
+        if (mOpenDialogCount == 1 && !mDrawerOpen) {
+            // First dialog opened and no drawer is open, pause the game
+            try {
+                if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
+                    android.util.Log.d("DialogTracking", "Pausing game on dialog open");
+                    NativeApp.pause();
+                    updatePausePlayButton();
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+    
+    public void onDialogClosed() {
+        mOpenDialogCount = Math.max(0, mOpenDialogCount - 1);
+        android.util.Log.d("DialogTracking", "Dialog closed. Count: " + mOpenDialogCount + ", Drawer open: " + mDrawerOpen);
+        if (mOpenDialogCount == 0 && !mDrawerOpen) {
+            // All dialogs closed and no drawers open, resume the game
+            try {
+                if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
+                    android.util.Log.d("DialogTracking", "Resuming game on dialog close");
+                    NativeApp.resume();
+                    updatePausePlayButton();
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+    
+    public void onDrawerOpened() {
+        mDrawerOpen = true;
+        android.util.Log.d("DrawerTracking", "Drawer opened");
+        // Drawer opened, pause the game
+        try {
+            if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
+                android.util.Log.d("DrawerTracking", "Pausing game on drawer open");
+                NativeApp.pause();
+                updatePausePlayButton();
+            }
+        } catch (Throwable ignored) {}
+    }
+    
+    public void onDrawerClosed() {
+        mDrawerOpen = false;
+        android.util.Log.d("DrawerTracking", "Drawer closed. Dialog count: " + mOpenDialogCount);
+        if (mOpenDialogCount == 0 && !mDrawerOpen) {
+            // All dialogs closed and no drawers open, resume the game
+            try {
+                if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
+                    android.util.Log.d("DrawerTracking", "Resuming game on drawer close");
+                    NativeApp.resume();
+                    updatePausePlayButton();
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+
     private void setupDrawerListeners() {
         try {
             DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -2307,22 +2463,12 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
 
                     @Override
                     public void onDrawerOpened(@NonNull View drawerView) {
-                        // Pause game when any drawer is opened
-                        try {
-                            if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
-                                NativeApp.pause();
-                            }
-                        } catch (Throwable ignored) {}
+                        MainActivity.this.onDrawerOpened();
                     }
 
                     @Override
                     public void onDrawerClosed(@NonNull View drawerView) {
-                        // Resume game when all drawers are closed
-                        try {
-                            if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
-                                NativeApp.resume();
-                            }
-                        } catch (Throwable ignored) {}
+                        MainActivity.this.onDrawerClosed();
                     }
 
                     @Override

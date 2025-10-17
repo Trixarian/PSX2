@@ -72,15 +72,10 @@ public class SettingsDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        // Pause game when settings dialog is shown
-        try {
-            if (getActivity() instanceof MainActivity) {
-                MainActivity mainActivity = (MainActivity) getActivity();
-                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
-                    NativeApp.pause();
-                }
-            }
-        } catch (Throwable ignored) {}
+        // Notify main activity that dialog is opening
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).onDialogOpened();
+        }
         
         Context ctx = requireContext();
         View view = getLayoutInflater().inflate(R.layout.dialog_settings, null, false);
@@ -294,14 +289,11 @@ public class SettingsDialogFragment extends DialogFragment {
         
         // Resume game when dialog is dismissed
         dialog.setOnDismissListener(d -> {
-            try {
-                if (getActivity() instanceof MainActivity) {
-                    MainActivity mainActivity = (MainActivity) getActivity();
-                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
-                        NativeApp.resume();
-                    }
-                }
-            } catch (Throwable ignored) {}
+            android.util.Log.d("SettingsDialog", "Settings dialog dismissed");
+            // Use the global dialog tracking system
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogClosed();
+            }
         });
         
         return dialog;

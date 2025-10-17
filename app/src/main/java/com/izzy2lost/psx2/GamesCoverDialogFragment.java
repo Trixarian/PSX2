@@ -98,6 +98,18 @@ public class GamesCoverDialogFragment extends DialogFragment {
         forceDialogImmersive();
         if (rv != null) applyCoverflowTransforms(rv);
     }
+    
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Dialog is being destroyed - resume the game
+        android.util.Log.d("GamesCoverDialog", "onDestroy called - resuming game");
+        try {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogClosed();
+            }
+        } catch (Throwable ignored) {}
+    }
 
     @Override
     public void onConfigurationChanged(@NonNull android.content.res.Configuration newConfig) {
@@ -117,13 +129,10 @@ public class GamesCoverDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        // Pause game when games cover dialog is shown
+        // Notify MainActivity that this dialog is opening
         try {
             if (getActivity() instanceof MainActivity) {
-                MainActivity mainActivity = (MainActivity) getActivity();
-                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
-                    NativeApp.pause();
-                }
+                ((MainActivity) getActivity()).onDialogOpened();
             }
         } catch (Throwable ignored) {}
         
@@ -131,18 +140,6 @@ public class GamesCoverDialogFragment extends DialogFragment {
         Dialog d = new Dialog(requireContext(), R.style.PSX2_FullScreenDialog);
         // Ensure immersive as soon as window exists
         try { applyImmersiveToWindow(d.getWindow()); } catch (Throwable ignored) {}
-        
-        // Resume game when dialog is dismissed
-        d.setOnDismissListener(dialog -> {
-            try {
-                if (getActivity() instanceof MainActivity) {
-                    MainActivity mainActivity = (MainActivity) getActivity();
-                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
-                        NativeApp.resume();
-                    }
-                }
-            } catch (Throwable ignored) {}
-        });
         
         return d;
     }
@@ -374,6 +371,36 @@ public class GamesCoverDialogFragment extends DialogFragment {
                 if (drawer != null) drawer.openDrawer(GravityCompat.START);
             } catch (Throwable ignored) {}
         });
+
+        // Setup drawer listener for pause/resume tracking
+        try {
+            androidx.drawerlayout.widget.DrawerLayout dialogDrawer = root.findViewById(R.id.dlg_drawer_layout);
+            if (dialogDrawer != null) {
+                dialogDrawer.addDrawerListener(new androidx.drawerlayout.widget.DrawerLayout.DrawerListener() {
+                    @Override
+                    public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {}
+
+                    @Override
+                    public void onDrawerOpened(@NonNull View drawerView) {
+                        // Notify MainActivity that drawer opened (will pause game)
+                        if (getActivity() instanceof MainActivity) {
+                            ((MainActivity) getActivity()).onDrawerOpened();
+                        }
+                    }
+
+                    @Override
+                    public void onDrawerClosed(@NonNull View drawerView) {
+                        // Notify MainActivity that drawer closed (will resume if no other dialogs open)
+                        if (getActivity() instanceof MainActivity) {
+                            ((MainActivity) getActivity()).onDrawerClosed();
+                        }
+                    }
+
+                    @Override
+                    public void onDrawerStateChanged(int newState) {}
+                });
+            }
+        } catch (Throwable ignored) {}
 
         // Wire in-dialog navigation header actions to mirror main drawer
         try {

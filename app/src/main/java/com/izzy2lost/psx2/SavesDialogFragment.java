@@ -148,13 +148,10 @@ public class SavesDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        // Pause game when saves dialog is shown
+        // Notify MainActivity that this dialog is opening
         try {
             if (getActivity() instanceof MainActivity) {
-                MainActivity mainActivity = (MainActivity) getActivity();
-                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
-                    NativeApp.pause();
-                }
+                ((MainActivity) getActivity()).onDialogOpened();
             }
         } catch (Throwable ignored) {}
         
@@ -192,7 +189,6 @@ public class SavesDialogFragment extends DialogFragment {
                     // Success - refresh the dialog or close it
                     dismiss();
                 }
-                NativeApp.resume();
             }
 
             @Override
@@ -201,7 +197,6 @@ public class SavesDialogFragment extends DialogFragment {
                     // Success
                     dismiss();
                 }
-                NativeApp.resume();
             }
         });
 
@@ -213,20 +208,18 @@ public class SavesDialogFragment extends DialogFragment {
                .setView(view)
                .setNegativeButton("Cancel", (d, w) -> d.dismiss());
 
-        Dialog dialog = builder.create();
-        
-        // Resume game when dialog is dismissed
-        dialog.setOnDismissListener(d -> {
-            try {
-                if (getActivity() instanceof MainActivity) {
-                    MainActivity mainActivity = (MainActivity) getActivity();
-                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
-                        NativeApp.resume();
-                    }
-                }
-            } catch (Throwable ignored) {}
-        });
-        
-        return dialog;
+        return builder.create();
+    }
+    
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Dialog is being destroyed - resume the game
+        android.util.Log.d("SavesDialog", "onDestroy called - resuming game");
+        try {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogClosed();
+            }
+        } catch (Throwable ignored) {}
     }
 }

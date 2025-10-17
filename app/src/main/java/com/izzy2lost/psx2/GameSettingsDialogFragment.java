@@ -41,17 +41,26 @@ public class GameSettingsDialogFragment extends DialogFragment {
         fragment.setArguments(args);
         return fragment;
     }
+    
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Dialog is being destroyed - resume the game
+        android.util.Log.d("GameSettingsDialog", "onDestroy called - resuming game");
+        try {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogClosed();
+            }
+        } catch (Throwable ignored) {}
+    }
 
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        // Pause game when game settings dialog is shown
+        // Notify MainActivity that this dialog is opening
         try {
             if (getActivity() instanceof MainActivity) {
-                MainActivity mainActivity = (MainActivity) getActivity();
-                if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && !NativeApp.isPaused()) {
-                    NativeApp.pause();
-                }
+                ((MainActivity) getActivity()).onDialogOpened();
             }
         } catch (Throwable ignored) {}
         
@@ -381,21 +390,7 @@ public class GameSettingsDialogFragment extends DialogFragment {
             });
         }
 
-        Dialog dialog = builder.create();
-        
-        // Resume game when dialog is dismissed
-        dialog.setOnDismissListener(d -> {
-            try {
-                if (getActivity() instanceof MainActivity) {
-                    MainActivity mainActivity = (MainActivity) getActivity();
-                    if (mainActivity.hasSelectedGame() && mainActivity.isEmulationThreadRunning() && NativeApp.isPaused()) {
-                        NativeApp.resume();
-                    }
-                }
-            } catch (Throwable ignored) {}
-        });
-        
-        return dialog;
+        return builder.create();
     }
 
     private void saveGameSettings(String gameSerial, String gameCrc,

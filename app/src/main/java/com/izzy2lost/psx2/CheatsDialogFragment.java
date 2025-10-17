@@ -30,6 +30,13 @@ public class CheatsDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        // Notify MainActivity that this dialog is opening
+        try {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogOpened();
+            }
+        } catch (Throwable ignored) {}
+        
         Context ctx = requireContext();
         View view = LayoutInflater.from(ctx).inflate(R.layout.simple_list, null, false);
         ListView lv = view.findViewById(android.R.id.list);
@@ -43,12 +50,23 @@ public class CheatsDialogFragment extends DialogFragment {
 
         refreshList();
 
-        return new MaterialAlertDialogBuilder(ctx, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        Dialog dialog = new MaterialAlertDialogBuilder(ctx, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
                 .setCustomTitle(UiUtils.centeredDialogTitle(ctx, "Manage Cheats"))
                 .setView(view)
                 .setNegativeButton("Close", null)
                 .setPositiveButton("Import For Game", (d, w) -> startImport())
                 .create();
+        
+        // Resume game when dialog is dismissed
+        dialog.setOnDismissListener(d -> {
+            android.util.Log.d("CheatsDialog", "Cheats dialog dismissed");
+            // Use the global dialog tracking system
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogClosed();
+            }
+        });
+        
+        return dialog;
     }
 
     private void refreshList() {

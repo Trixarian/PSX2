@@ -1,6 +1,7 @@
 package com.izzy2lost.psx2;
 
 import android.app.Dialog;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Gravity;
@@ -28,12 +29,66 @@ public class SetupWizardDialogFragment extends DialogFragment {
     private TextView hintView;
     private Runnable mPeriodicCheck;
     private boolean mHasAutoAdvanced = false;
+    
+    // Method to detect if this is a lower-end device
+    private boolean isLowerEndDevice() {
+        try {
+            // Check available memory
+            Runtime runtime = Runtime.getRuntime();
+            long maxMemory = runtime.maxMemory();
+            long totalMemory = runtime.totalMemory();
+            long freeMemory = runtime.freeMemory();
+            long availableMemory = maxMemory - totalMemory + freeMemory;
+            
+            // Consider device lower-end if it has less than 512MB available memory
+            boolean lowMemory = availableMemory < 512 * 1024 * 1024; // 512MB
+            
+            // Check Android version - older versions might be on older hardware
+            boolean oldAndroid = Build.VERSION.SDK_INT < Build.VERSION_CODES.P; // Android 9+
+            
+            // Check number of CPU cores
+            int cpuCores = runtime.availableProcessors();
+            boolean fewCores = cpuCores <= 2; // 2 or fewer cores
+            
+            android.util.Log.d("SetupWizard", "Device specs - Available Memory: " +
+                             (availableMemory / 1024 / 1024) + "MB, " +
+                             "CPU Cores: " + cpuCores +
+                             ", Android API: " + Build.VERSION.SDK_INT);
+            
+            return lowMemory || (oldAndroid && fewCores);
+        } catch (Exception e) {
+            android.util.Log.w("SetupWizard", "Error detecting device capabilities: " + e.getMessage());
+            return false; // Assume not lower-end if we can't detect
+        }
+    }
+    
+    // Method to get appropriate timeout based on device capabilities
+    private long getTimeoutForDevice(long baseTimeout, long lowerEndTimeout) {
+        return isLowerEndDevice() ? lowerEndTimeout : baseTimeout;
+    }
 
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        // Notify MainActivity that this dialog is opening
+        try {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogOpened();
+            }
+        } catch (Throwable ignored) {}
+        
         Dialog d = new Dialog(requireContext(), R.style.PSX2_FullScreenDialog);
         d.setContentView(buildContent());
+        
+        // Resume game when dialog is dismissed
+        d.setOnDismissListener(dialog -> {
+            android.util.Log.d("SetupWizardDialog", "Setup wizard dialog dismissed");
+            // Use the global dialog tracking system
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).onDialogClosed();
+            }
+        });
+        
         return d;
     }
 
@@ -141,13 +196,20 @@ public class SetupWizardDialogFragment extends DialogFragment {
                 try { a = (MainActivity) requireActivity(); a.setSetupWizardActive(false); } catch (Throwable ignored) {}
                 dismissAllowingStateLoss();
                 if (a != null) {
-                    // Open the games dialog just like the old GAMES button
+                    // Use adaptive delay based on device capabilities
+                    long manualDelay = getTimeoutForDevice(2000, 4000); // 2s normal, 4s lower-end
+                    android.util.Log.d("SetupWizard", "Using manual delay: " + manualDelay + "ms");
+                    
                     final MainActivity act = a;
                     View decor = act.getWindow() != null ? act.getWindow().getDecorView() : null;
                     if (decor != null) {
-                        decor.postDelayed(act::openGamesDialog, 150);
+                        decor.postDelayed(() -> {
+                            act.openGamesDialog();
+                        }, manualDelay);
                     } else {
-                        act.runOnUiThread(act::openGamesDialog);
+                        act.runOnUiThread(() -> {
+                            act.openGamesDialog();
+                        });
                     }
                 }
             }
@@ -310,7 +372,14 @@ public class SetupWizardDialogFragment extends DialogFragment {
             mHasAutoAdvanced = true;
             stopPeriodicCheck();
             
-            // All steps complete, auto-advance with delay to let BIOS processing finish
+            // Use adaptive timeouts based on device capabilities
+            long autoAdvanceDelay = getTimeoutForDevice(2000, 4000); // 2s normal, 4s lower-end
+            long gamesDialogDelay = getTimeoutForDevice(3000, 6000); // 3s normal, 6s lower-end
+            
+            android.util.Log.d("SetupWizard", "Using timeouts - Auto-advance: " + autoAdvanceDelay +
+                              "ms, Games dialog: " + gamesDialogDelay + "ms");
+            
+            // All steps complete, auto-advance with adaptive delay
             View decor = getDialog() != null && getDialog().getWindow() != null ? getDialog().getWindow().getDecorView() : null;
             if (decor != null) {
                 decor.postDelayed(() -> {
@@ -320,13 +389,15 @@ public class SetupWizardDialogFragment extends DialogFragment {
                         MainActivity a = (MainActivity) requireActivity();
                         a.setSetupWizardActive(false);
                         dismissAllowingStateLoss();
-                        // Add extra delay before opening games dialog to avoid overload
+                        // Add adaptive delay before opening games dialog
                         View mainDecor = a.getWindow() != null ? a.getWindow().getDecorView() : null;
                         if (mainDecor != null) {
-                            mainDecor.postDelayed(a::openGamesDialog, 800);
+                            mainDecor.postDelayed(() -> {
+                                a.openGamesDialog();
+                            }, gamesDialogDelay);
                         }
                     } catch (Throwable ignored) {}
-                }, 500);
+                }, autoAdvanceDelay);
             }
         }
     }
