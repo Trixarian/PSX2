@@ -189,17 +189,25 @@ public class GamesCoverDialogFragment extends DialogFragment {
         coverUrls = new String[uris.length];
         localPaths = new String[uris.length];
         SharedPreferences prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
+        boolean isFirstBoot = !prefs.getBoolean("has_resolved_titles_once", false);
+        
         for (int i = 0; i < uris.length; i++) {
             String saved = prefs.getString("serial:" + uris[i], null);
             String serial = saved;
+            // On first boot, skip native serial extraction to avoid crashes
+            // The background thread will handle it later with proper delays
             if (serial == null || serial.isEmpty()) {
-                try {
-                    String nativeSerial = NativeApp.getGameSerialSafe(uris[i]);
-                    if (nativeSerial != null && !nativeSerial.isEmpty()) {
-                        serial = normalizeSerial(nativeSerial);
-                        prefs.edit().putString("serial:" + uris[i], serial).apply();
+                if (!isFirstBoot) {
+                    try {
+                        String nativeSerial = NativeApp.getGameSerialSafe(uris[i]);
+                        if (nativeSerial != null && !nativeSerial.isEmpty()) {
+                            serial = normalizeSerial(nativeSerial);
+                            prefs.edit().putString("serial:" + uris[i], serial).apply();
+                        }
+                    } catch (Throwable e) {
+                        android.util.Log.w("GamesCoverDialog", "Error getting serial for " + uris[i] + ": " + e.getMessage());
                     }
-                } catch (Throwable ignored) {}
+                }
             }
             if (serial == null || serial.isEmpty()) {
                 serial = buildSerialFromUri(uris[i]);
@@ -295,25 +303,66 @@ public class GamesCoverDialogFragment extends DialogFragment {
 
         // Resolve proper game titles using local YAML index if available (GameIndex/Redump).
         // Falls back to native URI API, then filename if needed.
+        // Capture context early to avoid requireContext() crashes if fragment detaches
+        final Context ctx = requireContext().getApplicationContext();
+        
         new Thread(() -> {
-            boolean changed = false;
-            for (int i = 0; i < uris.length; i++) {
-                try {
-                    String t = TitleResolver.resolveTitleForUri(requireContext(), uris[i], titles[i]);
-                    if (t != null && !t.isEmpty() && i < titles.length && !t.equals(titles[i])) {
-                        titles[i] = t;
-                        if (origTitles != null && i < origTitles.length) origTitles[i] = t;
-                        changed = true;
-                    }
-                } catch (Throwable ignored) {}
-            }
-            if (changed && isAdded()) requireActivity().runOnUiThread(() -> {
-                if (sortMode != SORT_ALPHA || (query != null && !query.isEmpty())) {
-                    applyFilterAndSort();
-                } else {
-                    adapter.notifyDataSetChanged();
+            try {
+                // On first boot, add a delay to let native library fully initialize
+                if (isFirstBoot) {
+                    Thread.sleep(2000); // 2 second delay on first boot
                 }
-            });
+                
+                // Check if fragment is still attached before proceeding
+                if (!isAdded()) return;
+                
+                boolean changed = false;
+                for (int i = 0; i < uris.length; i++) {
+                    // Check if fragment is still attached on each iteration
+                    if (!isAdded()) break;
+                    
+                    try {
+                        String t = TitleResolver.resolveTitleForUri(ctx, uris[i], titles[i]);
+                        if (t != null && !t.isEmpty() && i < titles.length && !t.equals(titles[i])) {
+                            titles[i] = t;
+                            if (origTitles != null && i < origTitles.length) origTitles[i] = t;
+                            changed = true;
+                        }
+                    } catch (Throwable e) {
+                        android.util.Log.w("GamesCoverDialog", "Error resolving title for " + uris[i] + ": " + e.getMessage());
+                    }
+                }
+                
+                // Mark that we've resolved titles at least once
+                if (isFirstBoot && isAdded()) {
+                    try {
+                        ctx.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                            .edit().putBoolean("has_resolved_titles_once", true).apply();
+                    } catch (Throwable ignored) {}
+                }
+                
+                // Only update UI if fragment is still attached
+                if (changed && isAdded()) {
+                    try {
+                        requireActivity().runOnUiThread(() -> {
+                            try {
+                                if (!isAdded()) return;
+                                if (sortMode != SORT_ALPHA || (query != null && !query.isEmpty())) {
+                                    applyFilterAndSort();
+                                } else {
+                                    adapter.notifyDataSetChanged();
+                                }
+                            } catch (Throwable e) {
+                                android.util.Log.w("GamesCoverDialog", "Error updating UI after title resolution: " + e.getMessage());
+                            }
+                        });
+                    } catch (Throwable e) {
+                        android.util.Log.w("GamesCoverDialog", "Error posting to UI thread: " + e.getMessage());
+                    }
+                }
+            } catch (Throwable e) {
+                android.util.Log.e("GamesCoverDialog", "Error in title resolution thread: " + e.getMessage());
+            }
         }).start();
 
         // Dynamically size items based on RecyclerView size and orientation

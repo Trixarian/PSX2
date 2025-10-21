@@ -491,26 +491,30 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         }
         updateUiForControllerPresence();
 
-        // After initial BIOS auto-boot, gently open the Games dialog
-        // Only when setup is complete and this is app launch (not rotation)
-        if (getSharedPreferences("app_prefs", MODE_PRIVATE).getBoolean("first_run_done", false)) {
-            try {
-                final View decor = (getWindow() != null) ? getWindow().getDecorView() : null;
-                if (decor != null) {
-                    decor.postDelayed(() -> {
-                        if (!isFinishing() && !mSetupWizardActive) {
-                            openGamesDialog();
-                        }
-                    }, 1600); // small delay to let BIOS boot briefly
-                }
-            } catch (Throwable ignored) {}
-        }
-
         // Show first-run setup wizard if needed
-        if (!getSharedPreferences("app_prefs", MODE_PRIVATE).getBoolean("first_run_done", false)) {
+        SharedPreferences prefs = getSharedPreferences("app_prefs", MODE_PRIVATE);
+        boolean firstRunDone = prefs.getBoolean("first_run_done", false);
+        
+        if (!firstRunDone) {
             SetupWizardDialogFragment f = SetupWizardDialogFragment.newInstance();
             f.setCancelable(false);
             f.show(getSupportFragmentManager(), "setup_wizard");
+        } else {
+            // Only auto-open games dialog if this is NOT the first boot after setup
+            // (Setup wizard handles opening the games dialog on first completion)
+            boolean hasOpenedGamesAfterSetup = prefs.getBoolean("has_opened_games_after_setup", false);
+            if (hasOpenedGamesAfterSetup) {
+                try {
+                    final View decor = (getWindow() != null) ? getWindow().getDecorView() : null;
+                    if (decor != null) {
+                        decor.postDelayed(() -> {
+                            if (!isFinishing() && !mSetupWizardActive) {
+                                openGamesDialog();
+                            }
+                        }, 1600); // small delay to let BIOS boot briefly
+                    }
+                } catch (Throwable ignored) {}
+            }
         }
 
         // Setup right drawer quick actions
@@ -541,6 +545,12 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
     // Public method to open the games covers dialog via controller quick actions
     public void openGamesDialog() {
         SharedPreferences prefs = getSharedPreferences("app_prefs", MODE_PRIVATE);
+        
+        // Mark that we've opened games dialog after setup (prevents double-open on first boot)
+        if (!prefs.getBoolean("has_opened_games_after_setup", false)) {
+            prefs.edit().putBoolean("has_opened_games_after_setup", true).apply();
+        }
+        
         String folderUri = prefs.getString("games_folder_uri", null);
         if (TextUtils.isEmpty(folderUri)) {
             pickGamesFolder();
@@ -568,33 +578,13 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         if (btn_settings != null) {
             btn_settings.setOnClickListener(v -> {
                 try {
-                    // Pause game when opening settings drawer using the same logic as the pause/play button
-                    if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
-                        togglePauseState(); // This will pause the game and update button state
-                    }
-                    // Get drawer layout first
+                    // Just open the drawer - let the drawer listener handle pausing
                     DrawerLayout drawer = findViewById(R.id.drawer_layout);
                     if (drawer != null) {
-                        // Refresh drawer settings before opening - add error handling
-                        try {
-                            refreshDrawerSettings();
-                        } catch (Exception e) {
-                            android.util.Log.e("MainActivity", "Error refreshing drawer settings: " + e.getMessage());
-                            // Continue anyway even if refresh fails
-                        }
                         drawer.openDrawer(androidx.core.view.GravityCompat.START);
                     }
                 } catch (Throwable t) {
                     android.util.Log.e("MainActivity", "Error opening settings drawer: " + t.getMessage());
-                    // Try to open drawer directly as fallback
-                    try {
-                        DrawerLayout drawer = findViewById(R.id.drawer_layout);
-                        if (drawer != null) {
-                            drawer.openDrawer(androidx.core.view.GravityCompat.START);
-                        }
-                    } catch (Throwable fallback) {
-                        android.util.Log.e("MainActivity", "Fallback drawer open also failed: " + fallback.getMessage());
-                    }
                 }
             });
         }
@@ -2449,6 +2439,14 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
     public void onDrawerOpened() {
         mDrawerOpen = true;
         android.util.Log.d("DrawerTracking", "Drawer opened");
+        
+        // Refresh drawer settings to reflect current state
+        try {
+            refreshDrawerSettings();
+        } catch (Exception e) {
+            android.util.Log.e("DrawerTracking", "Error refreshing drawer settings: " + e.getMessage());
+        }
+        
         // Drawer opened, pause the game
         try {
             if (hasSelectedGame() && isThread() && !NativeApp.isPaused()) {
