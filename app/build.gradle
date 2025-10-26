@@ -3,18 +3,18 @@ plugins {
 }
 
 android {
-    namespace 'com.izzy2lost.psx2'
-    compileSdk 36
-    ndkVersion '28.2.13676358'
+    namespace = 'com.izzy2lost.psx2'
+    compileSdk = 36
+    ndkVersion = '28.2.13676358'
 
     defaultConfig {
-        applicationId "com.izzy2lost.psx2"
-        minSdk 26
-        targetSdk 36
+        applicationId = "com.izzy2lost.psx2"
+        minSdk = 26
+        targetSdk = 36
         versionCode 10
         versionName "1.0.8"
         // APK
-        setProperty("archivesBaseName","PSX2_${versionCode}_${new Date().format('yyyyMMddHHmm')}")
+        base.archivesName = "PSX2_${versionCode}_${new Date().format('yyyyMMddHHmm')}"
 
         externalNativeBuild {
             cmake {
@@ -36,8 +36,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             ndk {
                 debugSymbolLevel 'SYMBOL_TABLE'
@@ -46,13 +46,13 @@ android {
     }
     // Relax lint for test release builds
     lint {
-        checkReleaseBuilds false
-        abortOnError false
+        checkReleaseBuilds = false
+        abortOnError = false
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
-        coreLibraryDesugaringEnabled true
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+        coreLibraryDesugaringEnabled = true
     }
     externalNativeBuild {
         cmake {
@@ -66,7 +66,7 @@ android {
         }
         exclude 'META-INF/DEPENDENCIES'
     }
-    buildToolsVersion '36.0.0'
+    buildToolsVersion = '36.0.0'
 }
 
 tasks.register('bumpVersion') {

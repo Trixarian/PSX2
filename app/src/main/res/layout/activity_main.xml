@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:keepScreenOn="true"
+        tools:context=".MainActivity">
+
+    <FrameLayout
+        android:id="@+id/fl_board"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Menu button in top left corner -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_settings"
+        style="@style/PSX2.ElevatedTransparentButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:insetLeft="0dp"
+        android:insetRight="0dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:gravity="center"
+        android:text=""
+        app:icon="@drawable/menu_24px"
+        app:iconTint="@color/md_theme_tertiary"
+        app:iconGravity="textStart"
+        app:iconSize="24dp"
+        app:iconPadding="0dp"
+        app:rippleColor="#80cdcdcd"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_margin="12dp"/>
+
+    <!-- Pause/Play button in top right corner -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_pause_play"
+        style="@style/PSX2.ElevatedTransparentButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:insetLeft="0dp"
+        android:insetRight="0dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:gravity="center"
+        android:text=""
+        app:icon="@drawable/play_circle_24px"
+        app:iconTint="@color/brand_primary"
+        app:iconGravity="textStart"
+        app:iconSize="24dp"
+        app:iconPadding="0dp"
+        app:rippleColor="#80cdcdcd"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="12dp"
+        android:visibility="gone"/>
+
+    <!-- Visibility toggle removed -->
+
+    <LinearLayout
+        android:id="@+id/ll_quick_actions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btn_settings">
+
+        <!-- GAMES button removed; games dialog now opens after setup wizard and from drawer -->
+
+        <!-- SAVES button removed; use drawer or Quick Actions for save states -->
+
+    </LinearLayout>
+
+    <!-- Portrait control stack: Joy above D-Pad; both above Select/Start; Right cluster above Select/Start -->
+    <LinearLayout
+        android:id="@+id/ll_pad_select_start"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:visibility="visible"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_pad_select"
+            style="@style/PSX2.ElevatedTransparentButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="select"
+            android:textColor="#FFFFFFFF"
+            app:rippleColor="#80cdcdcd" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_pad_start"
+            style="@style/PSX2.ElevatedTransparentButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="start"
+            android:textColor="#FFFFFFFF"
+            app:rippleColor="#80cdcdcd" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_pad_right_buttons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="visible"
+        app:layout_constraintBottom_toTopOf="@id/ll_pad_select_start"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_l3"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="70dp"
+                android:layout_height="38dp"
+                android:layout_marginEnd="8dp"
+                android:text="L3"
+                app:rippleColor="#80cdcdcd" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_r3"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="70dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="8dp"
+                android:text="R3"
+                app:rippleColor="#80cdcdcd" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_l2"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="70dp"
+                android:layout_height="38dp" 
+                android:layout_marginEnd="8dp"
+                android:text="L2"
+                
+                app:rippleColor="#80cdcdcd" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_r2"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="70dp"
+                android:layout_height="38dp" 
+                android:layout_marginStart="8dp"
+                android:text="R2"
+                
+                app:rippleColor="#80cdcdcd" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_l1"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="70dp"
+                android:layout_height="38dp" 
+                android:layout_marginEnd="8dp"
+                android:text="L1"
+                
+                app:rippleColor="#80cdcdcd" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_r1"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="70dp"
+                android:layout_height="38dp" 
+                android:layout_marginStart="8dp"
+                android:text="R1"
+                
+                app:rippleColor="#80cdcdcd" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_x"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" 
+                android:layout_marginEnd="4dp"
+                android:text=""
+                android:gravity="center"
+                app:icon="@drawable/ic_ps2_square"
+                app:iconTint="#FF80C0"
+                app:iconPadding="0dp"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:rippleColor="#80cdcdcd" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_y"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" 
+                android:layout_marginStart="4dp"
+                android:text=""
+                android:gravity="center"
+                app:icon="@drawable/ic_ps2_triangle"
+                app:iconTint="#00D000"
+                app:iconPadding="0dp"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:rippleColor="#80cdcdcd" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_a"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" 
+                android:layout_marginEnd="4dp"
+                android:text=""
+                android:gravity="center"
+                app:icon="@drawable/ic_ps2_x"
+                app:iconTint="#4080FF"
+                app:iconPadding="0dp"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:rippleColor="#80cdcdcd" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_b"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" 
+                android:layout_marginStart="4dp"
+                android:text=""
+                android:gravity="center"
+                app:icon="@drawable/ic_ps2_circle"
+                app:iconTint="#FF3030"
+                app:iconPadding="0dp"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:rippleColor="#80cdcdcd" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_pad_joy"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginBottom="6dp">
+
+        <com.izzy2lost.psx2.JoystickView
+            android:id="@+id/joystick_view"
+            android:layout_width="170dp"
+            android:layout_height="170dp"
+            android:layout_margin="2dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_pad_dpad"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="2dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="visible"
+        app:layout_constraintBottom_toTopOf="@id/ll_pad_joy"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="0dp">
+
+        <GridLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:rowCount="3"
+            android:columnCount="3">
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_row="0"
+                android:layout_column="0" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_dir_top"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:gravity="center"
+                android:layout_row="0"
+                android:layout_column="1"
+                android:text=""
+                app:icon="@drawable/ic_arrow_up"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="18dp"
+                app:rippleColor="#80cdcdcd" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_row="0"
+                android:layout_column="2" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_dir_left"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:gravity="center"
+                android:layout_row="1"
+                android:layout_column="0"
+                android:text=""
+                app:icon="@drawable/ic_arrow_left"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="18dp"
+                app:rippleColor="#80cdcdcd" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_row="1"
+                android:layout_column="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_dir_right"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:gravity="center"
+                android:layout_row="1"
+                android:layout_column="2"
+                android:text=""
+                app:icon="@drawable/ic_arrow_right"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="18dp"
+                app:rippleColor="#80cdcdcd" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_row="2"
+                android:layout_column="0" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_pad_dir_bottom"
+                style="@style/PSX2.ElevatedTransparentButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:gravity="center"
+                android:layout_row="2"
+                android:layout_column="1"
+                android:text=""
+                app:icon="@drawable/ic_arrow_down"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="18dp"
+                app:rippleColor="#80cdcdcd" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_row="2"
+                android:layout_column="2" />
+        </GridLayout>
+    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Left drawer (NavigationView) -->
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/nav_view"
+        android:layout_width="320dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        app:itemIconTint="@color/md_theme_onSurface"
+        app:itemTextColor="@color/md_theme_onSurface"
+        app:headerLayout="@layout/drawer_header_settings" />
+
+    <!-- Right drawer (Quick Actions) -->
+    <include
+        android:id="@+id/end_drawer"
+        layout="@layout/drawer_right_quick_actions"
+        android:layout_width="280dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end" />
+
+</androidx.drawerlayout.widget.DrawerLayout>

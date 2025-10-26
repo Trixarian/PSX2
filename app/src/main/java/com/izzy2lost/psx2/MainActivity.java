@@ -423,18 +423,11 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        
-        // Force dark mode for consistent appearance
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+ (API 31+)
-            getWindow().getDecorView().getWindowInsetsController().setSystemBarsAppearance(0, 
-                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | 
-                android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-        }
-        // Force dark mode using AppCompat
+        // FORCE dark mode always - ignore system setting
         androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
             androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
+        
+        super.onCreate(savedInstanceState);
         
         // Enable edge-to-edge for Android 15+ compatibility
         EdgeToEdge.enable(this);
@@ -1277,14 +1270,9 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
                             Uri treeUri = data.getData();
                             if (treeUri != null) {
                                 final int takeFlags = (data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION));
-                                if ((takeFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0) {
+                                if (takeFlags != 0) {
                                     try {
-                                        getContentResolver().takePersistableUriPermission(treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                    } catch (SecurityException ignored) {}
-                                }
-                                if ((takeFlags & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0) {
-                                    try {
-                                        getContentResolver().takePersistableUriPermission(treeUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                                        getContentResolver().takePersistableUriPermission(treeUri, takeFlags);
                                     } catch (SecurityException ignored) {}
                                 }
                                 // Save folder and optionally show games
@@ -1670,12 +1658,6 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
             return true;
         }
         
-        // Handle back button for non-gamepad sources
-        if (p_keyCode == KeyEvent.KEYCODE_BACK) {
-            showExitDialog();
-            return true;
-        }
-        
         // Skip SDL controller manager to avoid mapping conflicts
         return super.onKeyDown(p_keyCode, p_event);
     }
@@ -1795,12 +1777,7 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        // Fallback for older Android versions
-        super.onBackPressed();
-        showExitDialog();
-    }
+    // Removed deprecated onBackPressed() - using OnBackPressedCallback instead
 
     private void showExitDialog() {
         new MaterialAlertDialogBuilder(this,

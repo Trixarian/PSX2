@@ -5,10 +5,10 @@
     <color name="brand_secondary">@color/md_theme_secondary</color>
     <color name="brand_outline">@color/md_theme_outline</color>
     <color name="brand_accent">@color/md_theme_secondary</color>
-    <!-- Ripple based on primary (50% alpha) for light theme -->
-    <color name="brand_ripple">#800061A3</color>
+    <!-- Ripple based on primary (50% alpha) -->
+    <color name="brand_ripple">#809ECAFF</color>
     
-    <!-- Semi-transparent surface container for buttons (70% alpha) - dark theme -->
+    <!-- Semi-transparent surface container for buttons (70% alpha) -->
     <color name="brand_surface_container_semi">#B31C2026</color>
 
     <!-- PS2 face button colors (static) -->

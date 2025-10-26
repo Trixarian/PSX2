@@ -1,6 +1,9 @@
 <resources>
-    <!-- Force dark theme for light mode - use same colors as night theme -->
+    <!-- Light theme using dark theme appearance -->
     <style name="AppTheme" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="colorPrimary">@color/md_theme_primary</item>
         <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_theme_primaryContainer</item>
@@ -49,9 +52,6 @@
         <item name="colorSurfaceContainerHighest">@color/md_theme_surfaceContainerHighest</item>
         <!-- Default MaterialButton styles -->
         <item name="materialButtonOutlinedStyle">@style/PSX2.OutlinedButton</item>
-        <!-- Force dark status and navigation bars -->
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
     <!-- Fullscreen Material3 dialog theme with no frame and transparent window background -->

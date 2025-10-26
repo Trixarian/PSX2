@@ -13,6 +13,7 @@
         <item name="rippleColor">@color/brand_ripple</item>
         <item name="backgroundTint">@color/brand_surface_container_semi</item>
         <item name="android:textAllCaps">true</item>
+
         <item name="strokeColor">@android:color/transparent</item>
         <item name="strokeWidth">0dp</item>
     </style>
