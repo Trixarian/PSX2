@@ -11,8 +11,8 @@ android {
         applicationId = "com.izzy2lost.psx2"
         minSdk = 26
         targetSdk = 36
-        versionCode 10
-        versionName "1.0.8"
+        versionCode 12
+        versionName "1.1.0"
         // APK
         base.archivesName = "PSX2_${versionCode}_${new Date().format('yyyyMMddHHmm')}"
 
@@ -43,6 +43,23 @@ android {
                 debugSymbolLevel 'SYMBOL_TABLE'
             }
         }
+        debug {
+            minifyEnabled = false
+            shrinkResources = false
+            debuggable = true
+        }
+    }
+    
+    bundle {
+        language {
+            enableSplit = false
+        }
+        density {
+            enableSplit = false
+        }
+        abi {
+            enableSplit = true
+        }
     }
     // Relax lint for test release builds
     lint {
@@ -63,27 +80,15 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging = true
+            keepDebugSymbols += ['**/*.so']
         }
         exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/NOTICE.txt'
     }
     buildToolsVersion = '36.0.0'
-}
-
-tasks.register('bumpVersion') {
-    doLast {
-        def buildFile = file('build.gradle')
-        def buildContent = buildFile.text
-        def versionPattern = /versionCode (\d+)/
-        def matcher = buildContent =~ versionPattern
-        
-        if (matcher.find()) {
-            def currentVersion = Integer.parseInt(matcher[0][1])
-            def newVersion = currentVersion + 1
-            def newContent = buildContent.replaceFirst(versionPattern, "versionCode ${newVersion}")
-            buildFile.text = newContent
-            println "Version code bumped from ${currentVersion} to ${newVersion}"
-        }
-    }
 }
 
 dependencies {
