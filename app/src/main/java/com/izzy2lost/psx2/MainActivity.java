@@ -571,13 +571,20 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         if (btn_settings != null) {
             btn_settings.setOnClickListener(v -> {
                 try {
-                    // Just open the drawer - let the drawer listener handle pausing
+                    // Open the drawer via post() to avoid reentrancy/layout timing issues
+                    // (programmatic open can sometimes race with layout/insets handling)
                     DrawerLayout drawer = findViewById(R.id.drawer_layout);
                     if (drawer != null) {
-                        drawer.openDrawer(androidx.core.view.GravityCompat.START);
+                        drawer.post(() -> {
+                            try {
+                                drawer.openDrawer(androidx.core.view.GravityCompat.START);
+                            } catch (Throwable t) {
+                                android.util.Log.e("MainActivity", "Error opening settings drawer (posted): " + t.getMessage());
+                            }
+                        });
                     }
                 } catch (Throwable t) {
-                    android.util.Log.e("MainActivity", "Error opening settings drawer: " + t.getMessage());
+                    android.util.Log.e("MainActivity", "Error scheduling settings drawer open: " + t.getMessage());
                 }
             });
         }

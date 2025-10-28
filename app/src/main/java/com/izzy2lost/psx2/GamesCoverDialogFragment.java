@@ -419,8 +419,19 @@ public class GamesCoverDialogFragment extends DialogFragment {
                 // Refresh drawer settings before opening
                 refreshDialogDrawerSettings();
                 androidx.drawerlayout.widget.DrawerLayout drawer = root.findViewById(R.id.dlg_drawer_layout);
-                if (drawer != null) drawer.openDrawer(GravityCompat.START);
-            } catch (Throwable ignored) {}
+                if (drawer != null) {
+                    // Defer the open to avoid layout/reentrancy races similar to activity path
+                    drawer.post(() -> {
+                        try {
+                            drawer.openDrawer(GravityCompat.START);
+                        } catch (Throwable t) {
+                            android.util.Log.e("GamesCoverDialog", "Error opening dialog drawer (posted): " + t.getMessage());
+                        }
+                    });
+                }
+            } catch (Throwable t) {
+                android.util.Log.e("GamesCoverDialog", "Error scheduling dialog drawer open: " + t.getMessage());
+            }
         });
 
         // Setup drawer listener for pause/resume tracking
@@ -605,8 +616,18 @@ public class GamesCoverDialogFragment extends DialogFragment {
             // Refresh drawer settings before opening
             refreshDialogDrawerSettings();
             androidx.drawerlayout.widget.DrawerLayout drawer = root.findViewById(R.id.dlg_drawer_layout);
-            if (drawer != null) drawer.openDrawer(androidx.core.view.GravityCompat.START);
-        } catch (Throwable ignored) {}
+            if (drawer != null) {
+                drawer.post(() -> {
+                    try {
+                        drawer.openDrawer(androidx.core.view.GravityCompat.START);
+                    } catch (Throwable t) {
+                        android.util.Log.e("GamesCoverDialog", "Error opening dialog drawer (posted): " + t.getMessage());
+                    }
+                });
+            }
+        } catch (Throwable t) {
+            android.util.Log.e("GamesCoverDialog", "Error scheduling dialog drawer open: " + t.getMessage());
+        }
     }
 
         private void setupDialogDrawerSettings(View header) {
