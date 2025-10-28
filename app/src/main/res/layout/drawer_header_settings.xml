@@ -40,6 +40,7 @@
                 android:contentDescription="Reboot"
                 app:srcCompat="@drawable/ic_reboot"
                 app:materialThemeOverlay="@style/ThemeOverlay.Material3Expressive.FloatingActionButton.Secondary"
+                android:foreground="@drawable/fab_focus_indicator"
                 android:layout_marginEnd="12dp" />
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -49,7 +50,8 @@
                 android:layout_height="wrap_content"
                 android:contentDescription="Power"
                 app:srcCompat="@drawable/ic_power"
-                app:materialThemeOverlay="@style/ThemeOverlay.Material3Expressive.FloatingActionButton.Tertiary" />
+                app:materialThemeOverlay="@style/ThemeOverlay.Material3Expressive.FloatingActionButton.Tertiary"
+                android:foreground="@drawable/fab_focus_indicator" />
         </LinearLayout>
 
         <TextView
