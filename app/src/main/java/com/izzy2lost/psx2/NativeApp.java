@@ -151,6 +151,10 @@ public class NativeApp {
         }
     }
 
+    // Get list of saves on a memory card
+    // Returns array of strings in format "filename|size|isDirectory"
+    public static native String[] getMemoryCardSaves(String memcardPath);
+
 	public static native void onNativeSurfaceCreated();
 	public static native void onNativeSurfaceChanged(Surface surface, int w, int h);
 	public static native void onNativeSurfaceDestroyed();

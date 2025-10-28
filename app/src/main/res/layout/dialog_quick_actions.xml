@@ -139,6 +139,20 @@
             android:drawablePadding="8dp" />
     </LinearLayout>
 
+    <!-- Row 3.25: Memory Cards -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_quick_memcards"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="MEMORY CARDS"
+        android:textColor="@android:color/white"
+        android:textAllCaps="true"
+        android:drawableStart="@drawable/sd_card_24px"
+        android:drawableTint="@color/brand_primary"
+        android:drawablePadding="8dp" />
+
     <!-- Row 3.5: Exit Game -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_quick_exit_game"

@@ -1638,3 +1638,104 @@ static std::vector<std::string> SafListFilesJNI(const char* subdir)
     env->DeleteLocalRef(arr);
     return ret;
 }
+
+// Get list of saves on a memory card using PCSX2's native parsing
+extern "C"
+JNIEXPORT jobjectArray JNICALL
+Java_com_izzy2lost_psx2_NativeApp_getMemoryCardSaves(JNIEnv* env, jclass, jstring p_memcard_path)
+{
+    if (!p_memcard_path) {
+        return env->NewObjectArray(0, env->FindClass("java/lang/String"), nullptr);
+    }
+
+    const char* path_chars = env->GetStringUTFChars(p_memcard_path, nullptr);
+    if (!path_chars) {
+        return env->NewObjectArray(0, env->FindClass("java/lang/String"), nullptr);
+    }
+
+    std::string memcard_path(path_chars);
+    env->ReleaseStringUTFChars(p_memcard_path, path_chars);
+
+    std::vector<std::string> saves;
+
+    // Open the memory card file
+    auto fp = FileSystem::OpenManagedCFile(memcard_path.c_str(), "rb");
+    if (!fp) {
+        return env->NewObjectArray(0, env->FindClass("java/lang/String"), nullptr);
+    }
+
+    // Read superblock to get root directory cluster
+    u8 superblock[512];
+    if (std::fread(superblock, 1, 512, fp.get()) != 512) {
+        return env->NewObjectArray(0, env->FindClass("java/lang/String"), nullptr);
+    }
+
+    // Extract alloc_offset (at 0x34) and rootdir_cluster (at 0x3C)
+    u32 alloc_offset = *(u32*)&superblock[0x34];
+    u32 rootdir_cluster = *(u32*)&superblock[0x3C];
+
+    // Calculate directory start position (each cluster is 1024 bytes)
+    u64 dir_start = (u64)(alloc_offset + rootdir_cluster) * 1024;
+
+    // Seek to directory
+    if (FileSystem::FSeek64(fp.get(), dir_start, SEEK_SET) != 0) {
+        return env->NewObjectArray(0, env->FindClass("java/lang/String"), nullptr);
+    }
+
+    // Read directory entries (each entry is 512 bytes)
+    for (int i = 0; i < 100; i++) {
+        u8 entry[512];
+        if (std::fread(entry, 1, 512, fp.get()) != 512) break;
+
+        // Read mode (first 4 bytes)
+        u32 mode = *(u32*)&entry[0];
+
+        // Skip empty entries
+        if (mode == 0 || mode == 0xFFFFFFFF) continue;
+
+        // Check if used (0x8000 flag)
+        if (!(mode & 0x8000)) continue;
+
+        // Read filename (at offset 0x40, max 32 bytes)
+        u8 name_bytes[32];
+        std::memcpy(name_bytes, &entry[0x40], 32);
+
+        // Convert to string, stopping at null terminator
+        std::string name_str;
+        for (int j = 0; j < 32; j++) {
+            if (name_bytes[j] == 0) break;
+            // Only include printable ASCII
+            if (name_bytes[j] >= 32 && name_bytes[j] <= 126) {
+                name_str += (char)name_bytes[j];
+            }
+        }
+
+        // Skip "." and ".." entries
+        if (name_str == "." || name_str == "..") continue;
+        if (name_str.empty()) continue;
+
+        // Read length field (at offset 0x04)
+        u32 length = *(u32*)&entry[0x04];
+
+        // Check if it's a directory (0x0020 flag)
+        bool is_dir = (mode & 0x0020) != 0;
+
+        // Basic sanity check - skip if length is suspiciously large
+        if (length > 1000000000) continue; // 1 billion is clearly wrong
+
+        // Format: "filename|size|isDirectory"
+        std::string save_info = StringUtil::StdStringFromFormat("%s|%u|%d", 
+            name_str.c_str(), length, is_dir ? 1 : 0);
+        saves.push_back(save_info);
+    }
+
+    // Convert to Java string array
+    jobjectArray result = env->NewObjectArray(saves.size(), env->FindClass("java/lang/String"), nullptr);
+    for (size_t i = 0; i < saves.size(); i++) {
+        jstring str = env->NewStringUTF(saves[i].c_str());
+        env->SetObjectArrayElement(result, i, str);
+        env->DeleteLocalRef(str);
+    }
+
+    return result;
+}

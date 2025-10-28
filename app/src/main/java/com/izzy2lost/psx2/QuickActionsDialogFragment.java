@@ -240,6 +240,15 @@ public class QuickActionsDialogFragment extends DialogFragment {
             });
         }
 
+        // Memory Cards: open memory card manager dialog
+        MaterialButton btnMemcards = view.findViewById(R.id.btn_quick_memcards);
+        if (btnMemcards != null) {
+            btnMemcards.setOnClickListener(v -> {
+                try { new MemoryCardManagerDialogFragment().show(getParentFragmentManager(), "memcard_manager_dialog"); } catch (Throwable ignored) {}
+                dismissAllowingStateLoss();
+            });
+        }
+
         // Exit Game: open games dialog
         if (btnExitGame != null) {
             btnExitGame.setOnClickListener(v -> {

@@ -23,3 +23,8 @@ build/
 *.aab
 *.properties
 release/
+mymc-pysrc-2.7/
+MEMORY_CARD_GUIDE.md
+MEMCARD_QUICK_REFERENCE.md
+MEMCARD_FEATURE_SUMMARY.md
+MEMCARD_ARCHITECTURE.md

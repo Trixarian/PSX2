@@ -146,6 +146,22 @@
             app:iconSize="20dp"
             android:layout_marginTop="4dp" />
 
+        <!-- Memory Card Manager -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/drawer_btn_memcard_manager"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Memory Cards"
+            android:textColor="@android:color/white"
+            android:textAllCaps="false"
+            app:icon="@drawable/sd_card_24px"
+            app:iconTint="@color/brand_primary"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:iconSize="20dp"
+            android:layout_marginTop="4dp" />
+
         <!-- Aspect Ratio -->
         <TextView
             android:layout_width="match_parent"

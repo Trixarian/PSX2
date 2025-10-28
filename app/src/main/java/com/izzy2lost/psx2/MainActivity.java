@@ -665,6 +665,15 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
                             } catch (Throwable ignored) {}
                         });
                     }
+                    View btnMemcardManager = header.findViewById(R.id.drawer_btn_memcard_manager);
+                    if (btnMemcardManager != null) {
+                        btnMemcardManager.setOnClickListener(v -> {
+                            try {
+                                MemoryCardManagerDialogFragment dialog = new MemoryCardManagerDialogFragment();
+                                dialog.show(getSupportFragmentManager(), "memcard_manager_dialog");
+                            } catch (Throwable ignored) {}
+                        });
+                    }
                     View btnAbout = header.findViewById(R.id.drawer_btn_about);
                     if (btnAbout != null) {
                         btnAbout.setOnClickListener(v -> {

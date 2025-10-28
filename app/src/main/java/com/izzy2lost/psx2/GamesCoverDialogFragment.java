@@ -526,6 +526,12 @@ public class GamesCoverDialogFragment extends DialogFragment {
                             try { new SavesDialogFragment().show(getParentFragmentManager(), "saves_dialog"); } catch (Throwable ignored) {}
                         });
                     }
+                    View btnMemcardManager = header.findViewById(R.id.drawer_btn_memcard_manager);
+                    if (btnMemcardManager != null) {
+                        btnMemcardManager.setOnClickListener(v -> {
+                            try { new MemoryCardManagerDialogFragment().show(getParentFragmentManager(), "memcard_manager_dialog"); } catch (Throwable ignored) {}
+                        });
+                    }
                     View btnAbout = header.findViewById(R.id.drawer_btn_about);
                     if (btnAbout != null) {
                         btnAbout.setOnClickListener(v -> {
