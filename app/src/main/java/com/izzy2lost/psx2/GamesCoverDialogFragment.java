@@ -213,16 +213,19 @@ public class GamesCoverDialogFragment extends DialogFragment {
                 serial = buildSerialFromUri(uris[i]);
             }
             coverUrls[i] = buildCoverUrlFromSerial(serial);
-            // Prefer SAF content URI if data root is set, else absolute file path
+            // Prefer SAF content URI if data root is set and the file already exists.
+            // Do NOT pre-create empty placeholder files here (they cause confusing zero-byte files
+            // alongside downloaded covers). If the SAF file doesn't exist yet, fall back to a
+            // filesystem path and let the downloader create the SAF file when performing the
+            // actual download (startDownloadCovers will create the SAF child as needed).
             android.net.Uri dataRoot = SafManager.getDataRootUri(requireContext());
             if (dataRoot != null) {
                 androidx.documentfile.provider.DocumentFile f = SafManager.getChild(requireContext(), new String[]{"covers"}, serial + ".png");
                 if (f != null && f.exists()) {
                     localPaths[i] = f.getUri().toString();
                 } else {
-                    // Pre-create to get a stable Uri
-                    androidx.documentfile.provider.DocumentFile nf = SafManager.createChild(requireContext(), new String[]{"covers"}, serial + ".png", "image/png");
-                    localPaths[i] = (nf != null) ? nf.getUri().toString() : new java.io.File(getCoversDir(), serial + ".png").getAbsolutePath();
+                    // Don't create an empty file here; use the file-system fallback path instead.
+                    localPaths[i] = new java.io.File(getCoversDir(), serial + ".png").getAbsolutePath();
                 }
             } else {
                 localPaths[i] = new java.io.File(getCoversDir(), serial + ".png").getAbsolutePath();
@@ -548,16 +551,6 @@ public class GamesCoverDialogFragment extends DialogFragment {
                         btnAbout.setOnClickListener(v -> {
                             try {
                                 showAboutDialog();
-                            } catch (Throwable ignored) {}
-                        });
-                    }
-                    
-                    View btnAchievements = header.findViewById(R.id.drawer_btn_achievements);
-                    if (btnAchievements != null) {
-                        btnAchievements.setOnClickListener(v -> {
-                            try {
-                                AchievementsDialogFragment achievementsDialog = AchievementsDialogFragment.newInstance();
-                                achievementsDialog.show(getParentFragmentManager(), "achievements");
                             } catch (Throwable ignored) {}
                         });
                     }
