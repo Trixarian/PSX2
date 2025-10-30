@@ -1,7 +1,9 @@
 #include <jni.h>
 #include <android/native_window_jni.h>
+#include <android/log.h>
 #include <unistd.h>
 #include "PrecompiledHeader.h"
+#include "AchievementsJNI.h"
 #include "common/StringUtil.h"
 #include "common/FileSystem.h"
 #include "common/Error.h"
@@ -238,9 +240,29 @@ Java_com_izzy2lost_psx2_NativeApp_initialize(JNIEnv *env, jclass clazz,
 //            si.SetBoolValue("MemoryCards", fmt::format("Slot{}_Enable", i + 1).c_str(), false);
 //            si.SetStringValue("MemoryCards", fmt::format("Slot{}_Filename", i + 1).c_str(), "");
 //        }
+
+        // Enable RetroAchievements
+        si.SetBoolValue("Achievements", "Enabled", true);
+        si.SetBoolValue("Achievements", "HardcoreMode", false);
+        si.SetBoolValue("Achievements", "Notifications", true);
+        si.SetBoolValue("Achievements", "LeaderboardNotifications", true);
+        si.SetBoolValue("Achievements", "SoundEffects", false); // No sound on Android
+        si.SetBoolValue("Achievements", "EncoreMode", false);
+        si.SetBoolValue("Achievements", "SpectatorMode", false);
+        si.SetBoolValue("Achievements", "UnofficialTestMode", false);
     }
 
     VMManager::Internal::LoadStartupSettings();
+    
+    // Initialize RetroAchievements JNI bridge
+    if (!AchievementsJNI::Initialize(env))
+    {
+        __android_log_print(ANDROID_LOG_ERROR, "PCSX2", "Failed to initialize AchievementsJNI");
+    }
+    else
+    {
+        __android_log_print(ANDROID_LOG_INFO, "PCSX2", "AchievementsJNI initialized successfully");
+    }
 }
 
 extern "C"

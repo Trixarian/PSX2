@@ -89,6 +89,10 @@ namespace Achievements
 	/// Returns true if RetroAchievements game data has been loaded.
 	bool HasActiveGame();
 
+	/// Gets the achievement list for Android (returns nullptr if no game loaded).
+	/// Caller must call rc_client_destroy_achievement_list() when done.
+	void* GetAchievementListForAndroid();
+
 	/// Returns the RetroAchievements ID for the current game.
 	u32 GetGameID();
 

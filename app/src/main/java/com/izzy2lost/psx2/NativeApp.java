@@ -155,6 +155,20 @@ public class NativeApp {
     // Returns array of strings in format "filename|size|isDirectory"
     public static native String[] getMemoryCardSaves(String memcardPath);
 
+    // RetroAchievements native methods
+    public static native boolean achievementsIsActive();
+    public static native boolean achievementsIsHardcoreMode();
+    public static native boolean achievementsHasActiveGame();
+    public static native String achievementsGetGameTitle();
+    public static native int achievementsGetGameId();
+    public static native String achievementsGetRichPresence();
+    public static native void achievementsLogin(String username, String password);
+    public static native void achievementsLogout();
+    public static native void achievementsInitialize();
+    public static native void achievementsShutdown();
+    public static native Achievement[] achievementsGetAchievementList();
+    public static native void achievementsSetHardcoreMode(boolean enabled);
+
 	public static native void onNativeSurfaceCreated();
 	public static native void onNativeSurfaceChanged(Surface surface, int w, int h);
 	public static native void onNativeSurfaceDestroyed();

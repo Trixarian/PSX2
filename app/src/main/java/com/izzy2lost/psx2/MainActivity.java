@@ -454,6 +454,9 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
 
         Initialize();
 
+        // Initialize RetroAchievements
+        RetroAchievementsManager.initialize(this);
+
         // Initialize controller input handler
         mControllerInputHandler = new ControllerInputHandler(this);
         
@@ -687,6 +690,20 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
                             try {
                                 showAboutDialog();
                             } catch (Throwable ignored) {}
+                        });
+                    }
+                    
+                    // Achievements button
+                    View btnAchievements = header.findViewById(R.id.drawer_btn_achievements);
+                    if (btnAchievements != null) {
+                        btnAchievements.setOnClickListener(v -> {
+                            try {
+                                android.util.Log.d("MainActivity", "Achievements button clicked");
+                                AchievementsDialogFragment dialog = AchievementsDialogFragment.newInstance();
+                                dialog.show(getSupportFragmentManager(), "achievements_dialog");
+                            } catch (Throwable e) {
+                                android.util.Log.e("MainActivity", "Error showing achievements dialog: " + e.getMessage());
+                            }
                         });
                     }
 
@@ -1590,6 +1607,36 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
                     btn_pause_play.setIcon(ContextCompat.getDrawable(this, R.drawable.pause_circle_24px));
                 }
             });
+            
+            // Auto-initialize and login to achievements if enabled
+            SharedPreferences prefs = getSharedPreferences("RetroAchievements", MODE_PRIVATE);
+            boolean achievementsEnabled = prefs.getBoolean("enabled", false);
+            if (achievementsEnabled) {
+                String username = prefs.getString("username", "");
+                boolean rememberMe = prefs.getBoolean("remember_me", false);
+                String savedPassword = prefs.getString("saved_password", "");
+                
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(3000); // Wait 3 seconds for game to start
+                        
+                        // Initialize if not already active
+                        if (!NativeApp.achievementsIsActive()) {
+                            android.util.Log.d("Achievements", "Auto-initializing achievements for game");
+                            NativeApp.achievementsInitialize();
+                            Thread.sleep(500); // Wait for initialization
+                        }
+                        
+                        // Auto-login if credentials are saved
+                        if (!username.isEmpty() && rememberMe && !savedPassword.isEmpty()) {
+                            android.util.Log.d("Achievements", "Auto-logging in as: " + username);
+                            NativeApp.achievementsLogin(username, savedPassword);
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("Achievements", "Failed to auto-initialize/login: " + e.getMessage());
+                    }
+                }).start();
+            }
         }
     }
 
@@ -2770,5 +2817,6 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
             } catch (Exception ignored) {}
         }
     }
+
 
 }

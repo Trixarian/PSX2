@@ -249,6 +249,15 @@ public class QuickActionsDialogFragment extends DialogFragment {
             });
         }
 
+        // Achievements: open achievements dialog
+        MaterialButton btnAchievements = view.findViewById(R.id.btn_quick_achievements);
+        if (btnAchievements != null) {
+            btnAchievements.setOnClickListener(v -> {
+                try { AchievementsDialogFragment.newInstance().show(getParentFragmentManager(), "achievements_dialog"); } catch (Throwable ignored) {}
+                dismissAllowingStateLoss();
+            });
+        }
+
         // Exit Game: open games dialog
         if (btnExitGame != null) {
             btnExitGame.setOnClickListener(v -> {

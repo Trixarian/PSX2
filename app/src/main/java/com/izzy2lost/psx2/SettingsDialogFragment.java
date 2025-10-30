@@ -168,6 +168,19 @@ public class SettingsDialogFragment extends DialogFragment {
                 controllerDialog.show(getParentFragmentManager(), "controller_test");
             });
         }
+        
+        // RetroAchievements button
+        View btnAchievements = view.findViewById(R.id.btn_achievements);
+        android.util.Log.d("SettingsDialog", "btnAchievements found: " + (btnAchievements != null));
+        if (btnAchievements != null) {
+            btnAchievements.setOnClickListener(v -> {
+                android.util.Log.d("SettingsDialog", "Achievements button clicked!");
+                AchievementsDialogFragment achievementsDialog = AchievementsDialogFragment.newInstance();
+                achievementsDialog.show(getParentFragmentManager(), "achievements");
+            });
+        } else {
+            android.util.Log.e("SettingsDialog", "btn_achievements NOT FOUND in layout!");
+        }
 
         // Populate scale spinner (1x..8x)
         ArrayAdapter<CharSequence> scaleAdapter = ArrayAdapter.createFromResource(ctx,

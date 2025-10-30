@@ -28,3 +28,10 @@ MEMORY_CARD_GUIDE.md
 MEMCARD_QUICK_REFERENCE.md
 MEMCARD_FEATURE_SUMMARY.md
 MEMCARD_ARCHITECTURE.md
+
+# Ignore all Markdown and txt files
+*.md
+*.txt
+
+# But do NOT ignore README.md
+!README.md

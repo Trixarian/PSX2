@@ -551,6 +551,16 @@ public class GamesCoverDialogFragment extends DialogFragment {
                             } catch (Throwable ignored) {}
                         });
                     }
+                    
+                    View btnAchievements = header.findViewById(R.id.drawer_btn_achievements);
+                    if (btnAchievements != null) {
+                        btnAchievements.setOnClickListener(v -> {
+                            try {
+                                AchievementsDialogFragment achievementsDialog = AchievementsDialogFragment.newInstance();
+                                achievementsDialog.show(getParentFragmentManager(), "achievements");
+                            } catch (Throwable ignored) {}
+                        });
+                    }
 
                     // Setup drawer settings controls to mirror quick actions
                     setupDialogDrawerSettings(header);

@@ -173,6 +173,13 @@ bool HTTPDownloaderCurl::StartRequest(HTTPDownloader::Request* request)
 	curl_easy_setopt(req->handle, CURLOPT_PRIVATE, req);
 	curl_easy_setopt(req->handle, CURLOPT_FOLLOWLOCATION, 1L);
 
+#ifdef __ANDROID__
+	// Android doesn't have easy access to system CA certificates
+	// Disable SSL verification for now - in production you'd want to bundle CA certs
+	curl_easy_setopt(req->handle, CURLOPT_SSL_VERIFYPEER, 0L);
+	curl_easy_setopt(req->handle, CURLOPT_SSL_VERIFYHOST, 0L);
+#endif
+
 	if (request->type == Request::Type::Post)
 	{
 		curl_easy_setopt(req->handle, CURLOPT_POST, 1L);

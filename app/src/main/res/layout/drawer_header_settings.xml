@@ -326,6 +326,25 @@
             app:iconGravity="textStart"
             app:iconPadding="8dp"
             app:iconSize="20dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- RetroAchievements Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RetroAchievements"
+            android:textStyle="bold"
+            android:textColor="@color/brand_primary"
+            android:paddingBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/drawer_btn_achievements"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🏆 Achievements"
+            android:textColor="@android:color/white"
+            android:textAllCaps="false"
             android:layout_marginBottom="16dp"/>
 
     </LinearLayout>

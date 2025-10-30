@@ -50,6 +50,10 @@
 #include "RA_Interface.h"
 #endif
 
+#ifdef __ANDROID__
+#include "../AchievementsAndroid.h"
+#endif
+
 namespace Achievements
 {
 	static constexpr u32 LEADERBOARD_NEARBY_ENTRIES_TO_FETCH = 10;
@@ -361,6 +365,16 @@ bool Achievements::IsHardcoreModeActive()
 bool Achievements::HasActiveGame()
 {
 	return s_game_id != 0;
+}
+
+void* Achievements::GetAchievementListForAndroid()
+{
+	if (!s_client || !HasActiveGame())
+		return nullptr;
+
+	return rc_client_create_achievement_list(s_client,
+		RC_CLIENT_ACHIEVEMENT_CATEGORY_CORE_AND_UNOFFICIAL,
+		RC_CLIENT_ACHIEVEMENT_LIST_GROUPING_PROGRESS);
 }
 
 u32 Achievements::GetGameID()
@@ -1010,6 +1024,9 @@ void Achievements::ClearGameHash()
 
 void Achievements::DisplayAchievementSummary()
 {
+#ifdef __ANDROID__
+	AchievementsAndroid::NotifyGameSummary(s_game_title.c_str(), &s_game_summary);
+#else
 	if (EmuConfig.Achievements.Notifications)
 	{
 		std::string title;
@@ -1043,6 +1060,7 @@ void Achievements::DisplayAchievementSummary()
 			}
 		});
 	}
+#endif
 
 #if !defined(__ANDROID__)
 	if (EmuConfig.Achievements.SoundEffects && EmuConfig.Achievements.InfoSound)
@@ -1081,6 +1099,10 @@ void Achievements::HandleUnlockEvent(const rc_client_event_t* event)
 	Console.WriteLn("Achievements: Achievement %s (%u) for game %u unlocked", cheevo->title, cheevo->id, s_game_id);
 	UpdateGameSummary();
 
+#ifdef __ANDROID__
+	AchievementsAndroid::NotifyAchievementUnlocked(cheevo);
+#endif
+
 	if (EmuConfig.Achievements.Notifications)
 	{
 		std::string title;
@@ -1109,6 +1131,11 @@ void Achievements::HandleGameCompleteEvent(const rc_client_event_t* event)
 	Console.WriteLn("Achievements: Game %u complete", s_game_id);
 	UpdateGameSummary();
 
+#ifdef __ANDROID__
+	AchievementsAndroid::NotifyGameComplete(s_game_title.c_str(), 
+		s_game_summary.num_unlocked_achievements, s_game_summary.points_unlocked);
+#endif
+
 	if (EmuConfig.Achievements.Notifications)
 	{
 		std::string title = fmt::format(TRANSLATE_FS("Achievements", "Mastered {}"), s_game_title);
@@ -1131,6 +1158,10 @@ void Achievements::HandleGameCompleteEvent(const rc_client_event_t* event)
 void Achievements::HandleLeaderboardStartedEvent(const rc_client_event_t* event)
 {
 	DevCon.WriteLn("Achievements: Leaderboard %u (%s) started", event->leaderboard->id, event->leaderboard->title);
+
+#ifdef __ANDROID__
+	AchievementsAndroid::NotifyLeaderboardStarted(event->leaderboard);
+#endif
 
 	if (EmuConfig.Achievements.LeaderboardNotifications)
 	{
@@ -1204,6 +1235,13 @@ void Achievements::HandleLeaderboardScoreboardEvent(const rc_client_event_t* eve
 {
 	Console.WriteLn("Achievements: Leaderboard %u scoreboard rank %u of %u", event->leaderboard_scoreboard->leaderboard_id,
 		event->leaderboard_scoreboard->new_rank, event->leaderboard_scoreboard->num_entries);
+
+#ifdef __ANDROID__
+	AchievementsAndroid::NotifyLeaderboardSubmitted(event->leaderboard,
+		event->leaderboard_scoreboard->submitted_score,
+		event->leaderboard_scoreboard->new_rank,
+		event->leaderboard_scoreboard->num_entries);
+#endif
 
 	if (EmuConfig.Achievements.LeaderboardNotifications)
 	{
@@ -1287,6 +1325,10 @@ void Achievements::HandleAchievementChallengeIndicatorShowEvent(const rc_client_
 	s_active_challenge_indicators.push_back(std::move(indicator));
 
 	DevCon.WriteLn("Achievements: Show challenge indicator for %u (%s)", event->achievement->id, event->achievement->title);
+
+#ifdef __ANDROID__
+	AchievementsAndroid::NotifyChallengeIndicatorShow(event->achievement);
+#endif
 }
 
 void Achievements::HandleAchievementChallengeIndicatorHideEvent(const rc_client_event_t* event)
@@ -1314,6 +1356,10 @@ void Achievements::HandleAchievementProgressIndicatorShowEvent(const rc_client_e
 	s_active_progress_indicator->achievement = event->achievement;
 	s_active_progress_indicator->badge_path = GetAchievementBadgePath(event->achievement, RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED);
 	s_active_progress_indicator->active = true;
+
+#ifdef __ANDROID__
+	AchievementsAndroid::NotifyProgressIndicatorUpdate(event->achievement);
+#endif
 }
 
 void Achievements::HandleAchievementProgressIndicatorHideEvent(const rc_client_event_t* event)
@@ -1744,6 +1790,11 @@ void Achievements::ShowLoginSuccess(const rc_client_t* client)
 		return;
 
 	Host::OnAchievementsLoginSuccess(user->username, user->score, user->score_softcore, user->num_unread_messages);
+
+#ifdef __ANDROID__
+	AchievementsAndroid::NotifyLoginSuccess(user->username, user->score,
+		user->score_softcore, user->num_unread_messages);
+#endif
 
 	// Were we logging in with a temporary client?
 	const auto lock = GetLock();
