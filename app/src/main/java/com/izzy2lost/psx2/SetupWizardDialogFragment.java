@@ -197,20 +197,10 @@ public class SetupWizardDialogFragment extends DialogFragment {
                 dismissAllowingStateLoss();
                 if (a != null) {
                     // Use adaptive delay based on device capabilities
-                    long manualDelay = getTimeoutForDevice(2000, 4000); // 2s normal, 4s lower-end
-                    android.util.Log.d("SetupWizard", "Using manual delay: " + manualDelay + "ms");
-                    
-                    final MainActivity act = a;
-                    View decor = act.getWindow() != null ? act.getWindow().getDecorView() : null;
-                    if (decor != null) {
-                        decor.postDelayed(() -> {
-                            act.openGamesDialog();
-                        }, manualDelay);
-                    } else {
-                        act.runOnUiThread(() -> {
-                            act.openGamesDialog();
-                        });
-                    }
+                    // Don't auto-open games dialog after setup wizard
+                    // This prevents crashes when BIOS is still booting
+                    // User can open it manually via home button when ready
+                    android.util.Log.d("SetupWizard", "Setup complete - user can open games dialog via home button");
                 }
             }
         });
@@ -389,13 +379,9 @@ public class SetupWizardDialogFragment extends DialogFragment {
                         MainActivity a = (MainActivity) requireActivity();
                         a.setSetupWizardActive(false);
                         dismissAllowingStateLoss();
-                        // Add adaptive delay before opening games dialog
-                        View mainDecor = a.getWindow() != null ? a.getWindow().getDecorView() : null;
-                        if (mainDecor != null) {
-                            mainDecor.postDelayed(() -> {
-                                a.openGamesDialog();
-                            }, gamesDialogDelay);
-                        }
+                        // Don't auto-open games dialog after setup wizard
+                        // This prevents crashes when BIOS is still booting
+                        // User can open it manually via home button when ready
                     } catch (Throwable ignored) {}
                 }, autoAdvanceDelay);
             }

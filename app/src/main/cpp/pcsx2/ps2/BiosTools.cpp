@@ -328,6 +328,18 @@ bool LoadBIOS()
 			return false;
 	}
 
+	// Check if BIOS is already loaded and matches the current path
+	// This avoids reloading the same BIOS file on every game launch
+	if (!BiosRom.empty() && !BiosPath.empty() && BiosPath == path)
+	{
+		Console.WriteLn("BIOS already loaded from cache: %s", path.c_str());
+		// Just copy the cached BIOS to memory instead of reloading from disk
+		CopyBIOSToMemory();
+		return true;
+	}
+
+	Console.WriteLn("Loading BIOS from disk: %s", path.c_str());
+
 	auto fp = FileSystem::OpenManagedCFile(path.c_str(), "rb");
 	if (!fp)
 		return false;

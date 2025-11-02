@@ -1172,6 +1172,16 @@ Java_com_izzy2lost_psx2_NativeApp_runVMThread(JNIEnv *env, jclass clazz,
     // fast_boot : (false:bios->game, true:game)
     VMBootParameters boot_params;
     boot_params.filename = _szPath;
+    
+    // Enable fast boot when booting BIOS-only (no game loaded)
+    // This skips the BIOS animation and goes straight to the PS2 menu
+    Console.WriteLn("runVMThread: path='%s', length=%zu", _szPath.c_str(), _szPath.length());
+    if (_szPath.empty()) {
+        boot_params.fast_boot = true;
+        Console.WriteLn("BIOS-only boot: Fast boot ENABLED to skip animation");
+    } else {
+        Console.WriteLn("Game boot: path=%s, fast_boot will use default behavior", _szPath.c_str());
+    }
 
     // Apply per-game settings (if any) before applying core settings
     ApplyPerGameSettingsForPath(_szPath);

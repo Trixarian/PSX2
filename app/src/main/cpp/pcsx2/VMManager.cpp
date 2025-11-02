@@ -1406,10 +1406,20 @@ bool VMManager::Initialize(VMBootParameters boot_params)
 
 	// Read fast boot setting late so it can be overridden per-game.
 	// ELFs must be fast booted, and GS dumps are never fast booted.
+	// Allow fast boot for BIOS-only boots if explicitly requested via boot_params
+	const bool has_disc = (CDVDsys_GetSourceType() != CDVD_SourceType::NoDisc);
+	const bool has_elf = !s_elf_override.empty();
+	const bool fast_boot_requested = boot_params.fast_boot.value_or(static_cast<bool>(EmuConfig.EnableFastBoot));
+	
+	Console.WriteLn("VMManager::Initialize - Fast boot check: has_disc=%d, has_elf=%d, fast_boot_requested=%d",
+		has_disc, has_elf, fast_boot_requested);
+	
 	s_fast_boot_requested =
-		(boot_params.fast_boot.value_or(static_cast<bool>(EmuConfig.EnableFastBoot)) || !s_elf_override.empty()) &&
-		(CDVDsys_GetSourceType() != CDVD_SourceType::NoDisc || !s_elf_override.empty()) &&
+		(fast_boot_requested || has_elf) &&
+		(has_disc || has_elf || fast_boot_requested) &&  // Allow fast boot for BIOS-only if explicitly requested
 		!GSDumpReplayer::IsReplayingDump();
+	
+	Console.WriteLn("VMManager::Initialize - s_fast_boot_requested=%d", s_fast_boot_requested);
 
 	if (!s_elf_override.empty())
 	{

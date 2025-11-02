@@ -1457,9 +1457,17 @@ static VkResult VULKAN_FindPhysicalDevice(VULKAN_RenderData *rendererData)
 
         VkPhysicalDevice physicalDevice = physicalDevices[physicalDeviceIndex];
         vkGetPhysicalDeviceProperties(physicalDevice, &rendererData->physicalDeviceProperties);
+        // Accept Vulkan 1.0 and above (was checking for < 1 which would never be true)
+        // Some devices report 1.0.x which is valid
         if (VK_VERSION_MAJOR(rendererData->physicalDeviceProperties.apiVersion) < 1) {
+            SDL_LogDebug(SDL_LOG_CATEGORY_RENDER, "Skipping device with API version < 1.0");
             continue;
         }
+        SDL_LogDebug(SDL_LOG_CATEGORY_RENDER, "Found device: %s (API version %d.%d.%d)", 
+            rendererData->physicalDeviceProperties.deviceName,
+            VK_VERSION_MAJOR(rendererData->physicalDeviceProperties.apiVersion),
+            VK_VERSION_MINOR(rendererData->physicalDeviceProperties.apiVersion),
+            VK_VERSION_PATCH(rendererData->physicalDeviceProperties.apiVersion));
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &rendererData->physicalDeviceMemoryProperties);
         vkGetPhysicalDeviceFeatures(physicalDevice, &rendererData->physicalDeviceFeatures);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, NULL);
@@ -1507,9 +1515,13 @@ static VkResult VULKAN_FindPhysicalDevice(VULKAN_RenderData *rendererData)
         }
 
         if (rendererData->graphicsQueueFamilyIndex == queueFamiliesCount) { // no good queues found
+            SDL_LogDebug(SDL_LOG_CATEGORY_RENDER, "Device %s: No graphics queue found", 
+                rendererData->physicalDeviceProperties.deviceName);
             continue;
         }
         if (rendererData->presentQueueFamilyIndex == queueFamiliesCount) { // no good queues found
+            SDL_LogDebug(SDL_LOG_CATEGORY_RENDER, "Device %s: No present queue found", 
+                rendererData->physicalDeviceProperties.deviceName);
             continue;
         }
         result = vkEnumerateDeviceExtensionProperties(physicalDevice, NULL, &deviceExtensionCount, NULL);
@@ -1548,8 +1560,12 @@ static VkResult VULKAN_FindPhysicalDevice(VULKAN_RenderData *rendererData)
             }
         }
         if (!hasSwapchainExtension) {
+            SDL_LogDebug(SDL_LOG_CATEGORY_RENDER, "Device %s: Missing VK_KHR_swapchain extension", 
+                rendererData->physicalDeviceProperties.deviceName);
             continue;
         }
+        SDL_LogDebug(SDL_LOG_CATEGORY_RENDER, "Device %s: Selected as suitable Vulkan device", 
+            rendererData->physicalDeviceProperties.deviceName);
         rendererData->physicalDevice = physicalDevice;
         break;
     }
@@ -1557,9 +1573,12 @@ static VkResult VULKAN_FindPhysicalDevice(VULKAN_RenderData *rendererData)
     SDL_free(queueFamiliesProperties);
     SDL_free(deviceExtensions);
     if (!rendererData->physicalDevice) {
+        SDL_LogError(SDL_LOG_CATEGORY_RENDER, "No viable Vulkan physical devices found. Checked %d device(s).", physicalDeviceCount);
+        SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Devices must support: Vulkan 1.0+, VK_KHR_swapchain, graphics queue, and present queue");
         SET_ERROR_MESSAGE("No viable physical devices found");
         return VK_ERROR_UNKNOWN;
     }
+    SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "Selected Vulkan device: %s", rendererData->physicalDeviceProperties.deviceName);
     return VK_SUCCESS;
 }
 
