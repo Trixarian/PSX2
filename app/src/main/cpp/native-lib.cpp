@@ -204,8 +204,10 @@ Java_com_izzy2lost_psx2_NativeApp_initialize(JNIEnv *env, jclass clazz,
         si.SetBoolValue("InputSources", "SDL", true);
         si.SetBoolValue("InputSources", "XInput", false);
 
-        // we don't need any sound output
-        si.SetStringValue("SPU2/Output", "OutputModule", "nullout");
+        // Use Oboe audio backend for Android (low-latency audio)
+        si.SetStringValue("SPU2/Output", "Backend", "Oboe");
+        si.SetIntValue("SPU2/Output", "BufferMS", 100); // 100ms buffer for stability
+        si.SetIntValue("SPU2/Output", "OutputLatencyMS", 20); // 20ms output latency
 
         // none of the bindings are going to resolve to anything
         Pad::ClearPortBindings(si, 0);
@@ -1186,8 +1188,16 @@ Java_com_izzy2lost_psx2_NativeApp_runVMThread(JNIEnv *env, jclass clazz,
     // Apply per-game settings (if any) before applying core settings
     ApplyPerGameSettingsForPath(_szPath);
 
+    // Ensure VM is properly shut down before initializing
+    if (VMManager::HasValidVM()) {
+        Console.Warning("VM still running from previous session, shutting down...");
+        VMManager::Shutdown(false);
+    }
+
     if (!VMManager::Internal::CPUThreadInitialize()) {
+        Console.Error("CPUThreadInitialize failed");
         VMManager::Internal::CPUThreadShutdown();
+        return false;
     }
 
     VMManager::ApplySettings();

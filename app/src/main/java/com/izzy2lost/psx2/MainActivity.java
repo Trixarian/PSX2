@@ -496,13 +496,20 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
             f.setCancelable(false);
             f.show(getSupportFragmentManager(), "setup_wizard");
         } else {
-            // Don't auto-open games dialog on app start
-            // User can open it manually via home button or controller
-            // This prevents crashes on devices where BIOS boot + dialog opening is too much at once
+            // Only auto-open games dialog if this is NOT the first boot after setup
+            // (Setup wizard handles opening the games dialog on first completion)
             boolean hasOpenedGamesAfterSetup = prefs.getBoolean("has_opened_games_after_setup", false);
-            if (!hasOpenedGamesAfterSetup) {
-                // Mark as opened so we don't show this message again
-                prefs.edit().putBoolean("has_opened_games_after_setup", true).apply();
+            if (hasOpenedGamesAfterSetup) {
+                try {
+                    final View decor = (getWindow() != null) ? getWindow().getDecorView() : null;
+                    if (decor != null) {
+                        decor.postDelayed(() -> {
+                            if (!isFinishing() && !mSetupWizardActive) {
+                                openGamesDialog();
+                            }
+                        }, 1600); // small delay to let BIOS boot briefly
+                    }
+                } catch (Throwable ignored) {}
             }
         }
 
@@ -567,17 +574,6 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         if (btn_settings != null) {
             btn_settings.setOnClickListener(v -> {
                 try {
-                    // Pause the emulation (BIOS or game) before opening drawer
-                    // This prevents crashes on some devices when drawer opens during emulation
-                    if (isThread() && !NativeApp.isPaused()) {
-                        try {
-                            NativeApp.pause();
-                            android.util.Log.d("MainActivity", "Paused emulation before opening drawer");
-                        } catch (Throwable e) {
-                            android.util.Log.e("MainActivity", "Error pausing before drawer open: " + e.getMessage());
-                        }
-                    }
-                    
                     // Open the drawer via post() to avoid reentrancy/layout timing issues
                     // (programmatic open can sometimes race with layout/insets handling)
                     DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -2505,21 +2501,20 @@ public class MainActivity extends AppCompatActivity implements GamesCoverDialogF
         mDrawerOpen = false;
         android.util.Log.d("DrawerTracking", "Drawer closed. Dialog count: " + mOpenDialogCount);
         if (mOpenDialogCount == 0 && !mDrawerOpen) {
-            // All dialogs closed and no drawers open, resume the emulation (game or BIOS) with a small delay
+            // All dialogs closed and no drawers open, resume the game with a small delay
             View root = findViewById(android.R.id.content);
             if (root != null) {
                 root.postDelayed(() -> {
                     try {
-                        // Resume if emulation thread is running and paused (works for both game and BIOS)
-                        if (isThread() && NativeApp.isPaused()) {
-                            android.util.Log.d("DrawerTracking", "Resuming emulation on drawer close");
+                        if (hasSelectedGame() && isThread() && NativeApp.isPaused()) {
+                            android.util.Log.d("DrawerTracking", "Resuming game on drawer close");
                             NativeApp.resume();
                             updatePausePlayButton();
                         } else {
-                            android.util.Log.d("DrawerTracking", "Not resuming - isThread: " + isThread() + ", isPaused: " + (isThread() ? NativeApp.isPaused() : "N/A"));
+                            android.util.Log.d("DrawerTracking", "Not resuming - hasGame: " + hasSelectedGame() + ", isThread: " + isThread() + ", isPaused: " + (isThread() ? NativeApp.isPaused() : "N/A"));
                         }
                     } catch (Throwable e) {
-                        android.util.Log.e("DrawerTracking", "Error resuming emulation: " + e.getMessage());
+                        android.util.Log.e("DrawerTracking", "Error resuming game: " + e.getMessage());
                     }
                 }, 100); // Small delay to let drawer fully close
             }
